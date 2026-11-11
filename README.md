@@ -2,37 +2,33 @@
 
 Web pública de la barbería y panel privado del propietario, **todo sobre Cloudflare**:
 
-- **Base de datos:** Cloudflare **D1** (`barberia-segorbe`, región WEUR) — ya creada con el esquema y los datos iniciales.
+- **Base de datos:** Cloudflare **D1** (`barberia-segorbe`, región WEUR), que crea `npm run setup` en tu cuenta.
 - **Backend:** un **Worker** (`worker/`) con la API en `/api/*`. El navegador nunca habla con la base de datos.
 - **Web:** React 19 · Vite · Tailwind 3.4.17 · GSAP · Lucide, servida por el mismo Worker (mismo dominio → cookies seguras).
 
 Páginas públicas: `/` (una pantalla), `/servicios`, `/reservar`, `/mis-citas`, `/cuenta`, `/la-barberia`, `/contacto`.
 Panel: `/admin/login`, `/admin`, `/admin/citas`, `/admin/clientes`, `/admin/servicios`, `/admin/finanzas`, `/admin/configuracion`.
 
-## Publicar (lo hace el propietario, una vez)
+## Publicar en tu cuenta de Cloudflare (una sola vez)
 
-Necesita Node 20+ y su cuenta de Cloudflare.
+Necesita Node 20+. Cloudflare **no tiene que ser la misma cuenta que GitHub**: se usa la que elijas al hacer login.
 
 ```bash
 npm install
 npx wrangler login
 ```
 
-La base de datos ya existe y ya tiene tablas y datos (ID en `wrangler.toml`). Para crear la cuenta del propietario en producción:
+En el navegador que se abre, entra con **tu** cuenta de Cloudflare y acepta. Después, un solo comando (con tu correo y una contraseña larga para el panel):
 
 ```bash
-node scripts/create-owner.mjs tu@correo.com "una-contraseña-larga" --remote
+npm run setup -- tu@correo.com "una-contraseña-larga"
 ```
 
-Y para publicar la web y la API:
+Hace todo en orden: crea la base de datos D1 en tu cuenta, aplica el esquema y los datos iniciales, crea tu usuario de propietario y publica la web y la API. Al terminar muestra una URL `*.workers.dev`. El dominio propio se añade luego en *Workers & Pages → barberia-segorbe → Settings → Domains*.
 
-```bash
-npm run deploy
-```
+Después entra en `/admin/login` → **Configuración** (horario real, datos legales, enlace de reseñas) y **Servicios** (precios y duraciones).
 
-Cloudflare devuelve una URL `*.workers.dev`; el dominio propio se añade en *Workers & Pages → barberia-segorbe → Settings → Domains*. Después, entrar en `/admin/login` → **Configuración** (horario real, datos legales, enlace de reseñas) y **Servicios** (precios y duraciones).
-
-Si el esquema cambia en el futuro: `npm run db:migrate` aplica las migraciones nuevas de `migrations/`.
+Para actualizar la web más adelante: `npm run deploy`. Si cambia el esquema: `npm run db:migrate`.
 
 ## Desarrollo local
 
