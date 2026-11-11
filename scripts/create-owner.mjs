@@ -20,5 +20,5 @@ const sql = `INSERT INTO users (email, password_hash, kind, display_name) VALUES
 const target = flags.includes('--remote') ? '--remote' : '--local'
 // D1_PERSIST permite apuntar a otra carpeta de datos locales (solo desarrollo/pruebas)
 const extra = target === '--local' && process.env.D1_PERSIST ? ['--persist-to', process.env.D1_PERSIST] : []
-execFileSync('npx', ['wrangler', 'd1', 'execute', 'barberia-segorbe', target, ...extra, '--command', sql], { stdio: 'inherit' })
+execFileSync('npx', ['wrangler', 'd1', 'execute', 'barberia', target, ...extra, '--command', sql], { stdio: 'inherit' })
 console.log(`\nPropietario listo: ${mail} (${target === '--remote' ? 'producción' : 'local'})`)

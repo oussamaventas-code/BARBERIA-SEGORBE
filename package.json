@@ -9,8 +9,8 @@
     "prebuild": "node scripts/gen-schema.mjs",
     "build": "vite build",
     "preview": "vite preview",
-    "db:migrate:local": "wrangler d1 migrations apply barberia-segorbe --local",
-    "db:migrate": "wrangler d1 migrations apply barberia-segorbe --remote",
+    "db:migrate:local": "wrangler d1 migrations apply barberia --local",
+    "db:migrate": "wrangler d1 migrations apply barberia --remote",
     "setup": "node scripts/setup-cloudflare.mjs",
     "deploy": "npm run build && wrangler deploy"
   },
