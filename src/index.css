@@ -1,0 +1,113 @@
+@import '@fontsource-variable/inter';
+@import '@fontsource-variable/jetbrains-mono';
+@import '@fontsource/playfair-display/500.css';
+@import '@fontsource/playfair-display/400-italic.css';
+@import '@fontsource/playfair-display/500-italic.css';
+@import '@fontsource/playfair-display/600-italic.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --ease-luxe: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    color-scheme: dark;
+  }
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+    }
+  }
+  body {
+    @apply bg-obsidian font-sans text-ivory antialiased;
+    overflow-x: hidden;
+    text-rendering: optimizeLegibility;
+  }
+  ::selection { background: rgba(201, 168, 76, 0.35); color: #fff; }
+  :focus-visible { outline: 2px solid #C9A84C; outline-offset: 3px; border-radius: 6px; }
+  img { max-width: 100%; }
+  input, select, textarea, button { font: inherit; }
+}
+
+@layer components {
+  /* Etiqueta pequeña (JetBrains Mono, espaciada) */
+  .label-mono {
+    @apply font-mono text-[11px] font-medium uppercase tracking-label text-champagne;
+  }
+  .editorial { @apply font-serif italic font-medium; }
+
+  /* Botón premium: capa interior deslizante + scale suave */
+  .btn {
+    @apply relative inline-flex select-none items-center justify-center gap-2 overflow-hidden rounded-full px-7 py-4
+      text-[13px] font-semibold uppercase tracking-[0.14em] outline-none;
+    transition: transform 0.45s var(--ease-luxe), color 0.45s var(--ease-luxe), box-shadow 0.45s var(--ease-luxe), border-color 0.45s var(--ease-luxe);
+    isolation: isolate;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    transform: translateY(101%);
+    transition: transform 0.55s var(--ease-luxe);
+  }
+  .btn:hover { transform: scale(1.03); }
+  .btn:hover::before { transform: translateY(0); }
+  .btn:active { transform: scale(0.98); }
+  .btn:disabled { @apply pointer-events-none opacity-50; }
+
+  .btn-gold { @apply bg-champagne text-obsidian; }
+  .btn-gold::before { @apply bg-ivory; }
+  .btn-ghost { @apply border border-white/25 text-white; }
+  .btn-ghost::before { @apply bg-white; }
+  .btn-ghost:hover { @apply border-white text-obsidian; }
+  .btn-dark { @apply bg-obsidian text-ivory; }
+  .btn-dark::before { @apply bg-champagne; }
+  .btn-dark:hover { @apply text-obsidian; }
+  .btn-sm { @apply px-5 py-3 text-[11px]; }
+
+  .link-lift { transition: transform 0.3s var(--ease-luxe), color 0.3s var(--ease-luxe); display: inline-block; }
+  .link-lift:hover { transform: translateY(-1px); }
+
+  /* Panel: componentes base */
+  .card { @apply rounded-4xl border border-white/[0.06] bg-slate; }
+  .input {
+    @apply w-full rounded-2xl border border-white/10 bg-obsidian/60 px-4 py-3 text-[15px] text-ivory placeholder:text-steel/70
+      transition-colors focus:border-champagne/70 focus:outline-none focus:ring-2 focus:ring-champagne/20;
+  }
+  .input-label { @apply mb-1.5 block text-xs font-medium uppercase tracking-[0.12em] text-steel; }
+  .abtn {
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold transition-all duration-300 ease-luxe
+      disabled:pointer-events-none disabled:opacity-50;
+  }
+  .abtn-gold { @apply bg-champagne text-obsidian hover:bg-champagne-light; }
+  .abtn-ghost { @apply border border-white/10 text-ivory hover:border-champagne/50 hover:text-champagne; }
+  .abtn-danger { @apply border border-status-noshow/40 text-status-noshow hover:bg-status-noshow/10; }
+}
+
+@layer utilities {
+  .text-balance { text-wrap: balance; }
+  .scrollbar-none { scrollbar-width: none; }
+  .scrollbar-none::-webkit-scrollbar { display: none; }
+  .pb-safe { padding-bottom: max(0.75rem, env(safe-area-inset-bottom)); }
+}
+
+/* Ruido global (feTurbulence) */
+.noise-overlay {
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  opacity: 0.05;
+  mix-blend-mode: overlay;
+}
