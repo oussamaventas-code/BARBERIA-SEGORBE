@@ -3,7 +3,7 @@
 Web pública cinematográfica y panel privado de gestión sobre **una misma base de datos Supabase**.
 
 - **Stack:** React 19 · Vite · Tailwind 3.4.17 · GSAP 3 (ScrollTrigger, SplitText) · Lucide · Supabase (Postgres, Auth, RLS)
-- **Web pública:** `/`, `/servicios`, `/reservar`, `/mis-citas`, `/contacto` (+ privacidad, aviso legal, cookies)
+- **Web pública:** `/` (una sola pantalla), `/servicios`, `/reservar`, `/mis-citas`, `/cuenta`, `/la-barberia`, `/contacto` (+ privacidad, aviso legal, cookies)
 - **Panel privado:** `/admin/login`, `/admin` (inicio), `/admin/citas`, `/admin/clientes`, `/admin/servicios`, `/admin/finanzas`, `/admin/configuracion`
 
 ## Puesta en marcha (lo que necesita el propietario)
@@ -27,9 +27,14 @@ Web pública cinematográfica y panel privado de gestión sobre **una misma base
 - La reserva es atómica: bloqueo consultivo por día + trigger de integridad en `appointments` (también protege las altas manuales). Probado con 6 reservas simultáneas al mismo hueco → 1 aceptada.
 - Un teléfono = un cliente (índice único con teléfono normalizado).
 
-## Autogestión del cliente (sin cuenta)
+## Clientes: cuenta o solo nombre
 
-Al reservar, el cliente recibe un enlace secreto (`/mis-citas/<token>`) y su navegador lo recuerda. Desde ahí puede **cambiar día/hora o cancelar solo esa cita** hasta X horas antes (Configuración → «Cancelar/cambiar hasta»). Un cambio vuelve a quedar *pendiente* hasta que la barbería lo confirme. Si pierde el enlace, la barbería gestiona la cita desde el panel.
+- **Sin cuenta (invitado):** pone nombre y teléfono. La base de datos lo une al cliente de ese teléfono (un teléfono = un cliente) y el dispositivo guarda un token secreto: a partir de ahí **lo reconoce** (saludo, datos rellenados, `Mis citas`, cambiar y cancelar) sin escribir nada.
+- **Con cuenta (email + contraseña):** además ve y gestiona sus citas desde cualquier móvil. Al crearla se vincula el historial del dispositivo.
+- **El teléfono no es una contraseña:** escribir el teléfono de otra persona no da acceso a sus citas ni a sus datos (solo a lo que él mismo reserva). Si alguien con historial intenta crear cuenta sin prueba, se le pide entrar desde su móvil o llamar.
+- El panel marca **Habitual** (3+ visitas completadas) y **Cuenta**.
+- Cancelar/cambiar: hasta X horas antes (Configuración). Un cambio vuelve a *pendiente*.
+- Para cuentas: en Supabase, *Authentication → Providers → Email*; decide si exige confirmar el email (recomendado).
 
 ## Reglas de negocio
 

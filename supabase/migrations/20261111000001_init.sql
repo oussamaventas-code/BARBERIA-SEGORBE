@@ -180,6 +180,8 @@ create table if not exists public.customers (
   notes               text,
   privacy_accepted_at timestamptz,
   marketing_consent   boolean not null default false,
+  user_id             uuid unique references auth.users (id) on delete set null,
+  access_token        uuid not null default gen_random_uuid(),
   source              text not null default 'admin' check (source in ('admin', 'web')),
   created_at          timestamptz not null default now(),
   updated_at          timestamptz not null default now(),
@@ -187,6 +189,7 @@ create table if not exists public.customers (
 );
 -- Un teléfono = un cliente (evita duplicados)
 create unique index if not exists customers_phone_key on public.customers (phone);
+create unique index if not exists customers_access_token_key on public.customers (access_token);
 create index if not exists customers_name_idx on public.customers (lower(name));
 
 create or replace function public.customers_normalize()
@@ -467,7 +470,8 @@ create or replace function public.create_booking(
   p_phone            text,
   p_email            text default null,
   p_notes            text default null,
-  p_privacy_accepted boolean default false
+  p_privacy_accepted boolean default false,
+  p_tokens           uuid[] default null
 )
 returns jsonb
 language plpgsql
@@ -486,6 +490,9 @@ declare
   v_appt       uuid;
   v_token      uuid;
   v_email      text;
+  v_new        boolean := false;
+  v_verified   boolean := false;
+  v_ctoken     uuid;
 begin
   if not coalesce(p_privacy_accepted, false) then
     raise exception 'PRIVACY_REQUIRED: Debes aceptar la política de privacidad' using errcode = 'P0001';
@@ -530,17 +537,33 @@ begin
     raise exception 'SLOT_TAKEN: Ese horario ya no está disponible' using errcode = 'P0001';
   end if;
 
-  -- Cliente: se reutiliza si el teléfono ya existe (sin sobrescribir sus datos)
-  select id into v_customer from public.customers where phone = v_phone;
-  if v_customer is null then
-    insert into public.customers (name, phone, email, privacy_accepted_at, source)
-    values (trim(p_name), v_phone, v_email, now(), 'web')
-    returning id into v_customer;
+  -- Identidad: 1) cuenta iniciada, 2) token de este dispositivo (ya reservó antes),
+  -- 3) invitado: se enlaza por teléfono. Solo en 1) y 2) hay prueba de quién es,
+  -- y solo entonces (o si es un cliente nuevo) se devuelve el token del dispositivo.
+  if auth.uid() is not null then
+    select id into v_customer from public.customers where user_id = auth.uid();
+  end if;
+  if v_customer is null and p_tokens is not null then
+    select c.id into v_customer from public.customers c where c.access_token = any (p_tokens) limit 1;
+  end if;
+  if v_customer is not null then
+    v_verified := true;
   else
-    update public.customers
-       set email = coalesce(email, v_email),
-           privacy_accepted_at = coalesce(privacy_accepted_at, now())
-     where id = v_customer;
+    select id into v_customer from public.customers where phone = v_phone;
+    if v_customer is null then
+      insert into public.customers (name, phone, email, privacy_accepted_at, source)
+      values (trim(p_name), v_phone, v_email, now(), 'web')
+      returning id into v_customer;
+      v_new := true;
+    else
+      update public.customers
+         set email = coalesce(email, v_email),
+             privacy_accepted_at = coalesce(privacy_accepted_at, now())
+       where id = v_customer;
+    end if;
+  end if;
+  if v_new or v_verified then
+    select access_token into v_ctoken from public.customers where id = v_customer;
   end if;
 
   -- Antiabuso: límite de solicitudes pendientes futuras por teléfono
@@ -571,6 +594,7 @@ begin
   return jsonb_build_object(
     'appointment_id', v_appt,
     'manage_token', v_token,
+    'customer_token', v_ctoken,
     'status', 'pending',
     'date', p_date,
     'start_time', to_char(p_start_time, 'HH24:MI'),
@@ -582,11 +606,32 @@ end;
 $$;
 
 -- =====================================================================
--- Autogestión del cliente SIN cuenta: enlace secreto (manage_token)
--- El token solo lo recibe quien reserva. Permite ver, cambiar y cancelar
--- ÚNICAMENTE esa cita y no expone datos de ninguna otra.
+-- Identidad del cliente y autogestión de citas
+--
+-- Un cliente es reconocido por:
+--   * su cuenta (Supabase Auth)  → customers.user_id
+--   * el token de su dispositivo → customers.access_token (se guarda en el
+--     navegador tras reservar; "invitado recurrente")
+--   * el token de una cita concreta → appointments.manage_token
+-- Con cualquiera de ellos puede ver, cambiar y cancelar SUS citas y nada más.
+-- Un teléfono tecleado NO es una prueba de identidad: nunca devuelve datos.
 -- =====================================================================
-create or replace function public.get_booking(p_token uuid)
+create or replace function public._authorized_appointments(p_tokens uuid[])
+returns setof public.appointments
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select a.*
+  from public.appointments a
+  join public.customers c on c.id = a.customer_id
+  where a.manage_token = any (coalesce(p_tokens, '{}'::uuid[]))
+     or c.access_token = any (coalesce(p_tokens, '{}'::uuid[]))
+     or (auth.uid() is not null and c.user_id = auth.uid());
+$$;
+
+create or replace function public.my_bookings(p_tokens uuid[] default null)
 returns jsonb
 language plpgsql
 stable
@@ -594,37 +639,47 @@ security definer
 set search_path = public
 as $$
 declare
-  s public.business_settings;
-  r record;
-  v_start timestamptz;
+  s          public.business_settings;
+  c          public.customers;
+  v_visits   integer;
+  v_customer jsonb := null;
+  v_bookings jsonb;
 begin
   select * into s from public.business_settings where id = 1;
-  select a.*, sv.name as service_name, c.name as customer_name
-    into r
-  from public.appointments a
-  join public.customers c on c.id = a.customer_id
-  left join public.services sv on sv.id = a.service_id
-  where a.manage_token = p_token;
-  if not found then return null; end if;
 
-  v_start := (r.appointment_date + r.start_time) at time zone s.timezone;
-  return jsonb_build_object(
-    'id', r.id,
-    'status', r.status,
-    'date', r.appointment_date,
-    'start_time', to_char(r.start_time, 'HH24:MI'),
-    'end_time', to_char(r.end_time, 'HH24:MI'),
-    'service_id', r.service_id,
-    'service_name', r.service_name,
-    'customer_name', r.customer_name,
-    'cancel_min_hours', s.cancel_min_hours,
-    'can_modify', r.status in ('pending', 'confirmed')
-                  and v_start >= now() + make_interval(hours => s.cancel_min_hours)
-  );
+  select coalesce(jsonb_agg(jsonb_build_object(
+      'id', a.id,
+      'status', a.status,
+      'date', a.appointment_date,
+      'start_time', to_char(a.start_time, 'HH24:MI'),
+      'end_time', to_char(a.end_time, 'HH24:MI'),
+      'service_id', a.service_id,
+      'service_name', sv.name,
+      'can_modify', a.status in ('pending', 'confirmed')
+                    and ((a.appointment_date + a.start_time) at time zone s.timezone)
+                        >= now() + make_interval(hours => s.cancel_min_hours)
+    ) order by a.appointment_date desc, a.start_time desc), '[]'::jsonb)
+  into v_bookings
+  from (select * from public._authorized_appointments(p_tokens)
+        order by appointment_date desc, start_time desc limit 30) a
+  left join public.services sv on sv.id = a.service_id;
+
+  select * into c from public.customers
+   where access_token = any (coalesce(p_tokens, '{}'::uuid[]))
+      or (auth.uid() is not null and user_id = auth.uid())
+   limit 1;
+  if found then
+    select count(*) into v_visits from public.appointments where customer_id = c.id and status = 'completed';
+    v_customer := jsonb_build_object(
+      'name', c.name, 'phone', c.phone, 'email', c.email,
+      'visits', v_visits, 'regular', v_visits >= 3, 'has_account', c.user_id is not null);
+  end if;
+
+  return jsonb_build_object('customer', v_customer, 'bookings', v_bookings, 'cancel_min_hours', s.cancel_min_hours);
 end;
 $$;
 
-create or replace function public.cancel_booking(p_token uuid)
+create or replace function public.cancel_booking(p_appointment_id uuid, p_tokens uuid[] default null)
 returns jsonb
 language plpgsql
 volatile
@@ -632,19 +687,22 @@ security definer
 set search_path = public
 as $$
 declare
-  b jsonb;
+  s public.business_settings;
+  a public.appointments;
 begin
-  b := public.get_booking(p_token);
-  if b is null then raise exception 'NOT_FOUND: No encontramos esa cita' using errcode = 'P0001'; end if;
-  if not (b->>'can_modify')::boolean then
+  select * into s from public.business_settings where id = 1;
+  select * into a from public._authorized_appointments(p_tokens) x where x.id = p_appointment_id;
+  if not found then raise exception 'NOT_FOUND: No encontramos esa cita' using errcode = 'P0001'; end if;
+  if a.status not in ('pending', 'confirmed')
+     or ((a.appointment_date + a.start_time) at time zone s.timezone) < now() + make_interval(hours => s.cancel_min_hours) then
     raise exception 'CANNOT_MODIFY: Esta cita ya no se puede cancelar online. Llámanos' using errcode = 'P0001';
   end if;
-  update public.appointments set status = 'cancelled' where manage_token = p_token;
-  return public.get_booking(p_token);
+  update public.appointments set status = 'cancelled' where id = a.id;
+  return public.my_bookings(p_tokens);
 end;
 $$;
 
-create or replace function public.reschedule_booking(p_token uuid, p_date date, p_start_time time)
+create or replace function public.reschedule_booking(p_appointment_id uuid, p_date date, p_start_time time, p_tokens uuid[] default null)
 returns jsonb
 language plpgsql
 volatile
@@ -652,17 +710,15 @@ security definer
 set search_path = public
 as $$
 declare
-  b    jsonb;
-  a    public.appointments;
+  s public.business_settings;
+  a public.appointments;
 begin
-  b := public.get_booking(p_token);
-  if b is null then raise exception 'NOT_FOUND: No encontramos esa cita' using errcode = 'P0001'; end if;
-  if not (b->>'can_modify')::boolean then
+  select * into s from public.business_settings where id = 1;
+  select * into a from public._authorized_appointments(p_tokens) x where x.id = p_appointment_id;
+  if not found then raise exception 'NOT_FOUND: No encontramos esa cita' using errcode = 'P0001'; end if;
+  if a.status not in ('pending', 'confirmed') or a.service_id is null
+     or ((a.appointment_date + a.start_time) at time zone s.timezone) < now() + make_interval(hours => s.cancel_min_hours) then
     raise exception 'CANNOT_MODIFY: Esta cita ya no se puede cambiar online. Llámanos' using errcode = 'P0001';
-  end if;
-  select * into a from public.appointments where manage_token = p_token;
-  if a.service_id is null then
-    raise exception 'CANNOT_MODIFY: Esta cita no se puede cambiar online. Llámanos' using errcode = 'P0001';
   end if;
 
   perform pg_advisory_xact_lock(hashtext('segorbe-agenda'), (p_date - date '2000-01-01'));
@@ -672,12 +728,71 @@ begin
 
   -- Un cambio vuelve a necesitar la confirmación de la barbería
   update public.appointments
-     set appointment_date = p_date,
-         start_time = p_start_time,
-         end_time = p_start_time + (a.end_time - a.start_time),
-         status = 'pending'
+     set appointment_date = p_date, start_time = p_start_time,
+         end_time = p_start_time + (a.end_time - a.start_time), status = 'pending'
    where id = a.id;
-  return public.get_booking(p_token);
+  return public.my_bookings(p_tokens);
+end;
+$$;
+
+-- Crear / vincular la cuenta de un cliente (requiere haber iniciado sesión).
+-- Vincula el historial solo con PRUEBA (token de dispositivo o de cita).
+-- Sin prueba y con un teléfono que ya tiene historial → se rechaza.
+create or replace function public.claim_customer(
+  p_name text, p_phone text, p_privacy_accepted boolean, p_tokens uuid[] default null
+)
+returns jsonb
+language plpgsql
+volatile
+security definer
+set search_path = public
+as $$
+declare
+  v_uid   uuid := auth.uid();
+  v_c     public.customers;
+  v_phone text := public.normalize_phone(p_phone);
+begin
+  if v_uid is null then
+    raise exception 'NOT_AUTH: Inicia sesión para continuar' using errcode = 'P0001';
+  end if;
+
+  if exists (select 1 from public.customers where user_id = v_uid) then
+    return public.my_bookings(p_tokens);
+  end if;
+
+  select c.* into v_c from public.customers c
+   where c.user_id is null
+     and (c.access_token = any (coalesce(p_tokens, '{}'::uuid[]))
+          or c.id in (select customer_id from public.appointments where manage_token = any (coalesce(p_tokens, '{}'::uuid[]))))
+   limit 1;
+
+  if found then
+    update public.customers set user_id = v_uid where id = v_c.id;
+  else
+    if not coalesce(p_privacy_accepted, false) then
+      raise exception 'PRIVACY_REQUIRED: Debes aceptar la política de privacidad' using errcode = 'P0001';
+    end if;
+    if p_name is null or length(trim(p_name)) < 2 then
+      raise exception 'INVALID_NAME: Indica tu nombre' using errcode = 'P0001';
+    end if;
+    if v_phone is null or v_phone !~ '^[0-9]{9,15}$' then
+      raise exception 'INVALID_PHONE: El teléfono no es válido' using errcode = 'P0001';
+    end if;
+
+    select * into v_c from public.customers where phone = v_phone;
+    if found then
+      if v_c.user_id is not null or exists (select 1 from public.appointments where customer_id = v_c.id) then
+        raise exception 'PHONE_IN_USE: Ese teléfono ya tiene historial en la barbería. Entra desde el móvil donde reservaste o llámanos para vincularlo' using errcode = 'P0001';
+      end if;
+      update public.customers set user_id = v_uid, name = trim(p_name),
+             privacy_accepted_at = coalesce(privacy_accepted_at, now()) where id = v_c.id;
+    else
+      insert into public.customers (name, phone, privacy_accepted_at, source, user_id)
+      values (trim(p_name), v_phone, now(), 'web', v_uid);
+    end if;
+  end if;
+
+  return public.my_bookings(p_tokens);
 end;
 $$;
 
@@ -702,6 +817,8 @@ select
      where a.customer_id = c.id and a.status in ('pending', 'confirmed')
        and a.appointment_date >= (now() at time zone 'Europe/Madrid')::date
      order by a.appointment_date, a.start_time limit 1) as next_appointment,
+  (c.user_id is not null) as has_account,
+  ((select count(*) from public.appointments a where a.customer_id = c.id and a.status = 'completed') >= 3) as regular,
   coalesce((select sum(p.amount) from public.payments p where p.customer_id = c.id and p.status = 'paid'), 0)::numeric(10,2) as total_spent
 from public.customers c;
 
@@ -781,9 +898,10 @@ grant select on public.staff, public.customer_stats to authenticated;
 
 grant execute on function public.get_available_slots(uuid, date, uuid) to anon, authenticated;
 grant execute on function public.get_available_days(uuid, date, date, uuid) to anon, authenticated;
-grant execute on function public.get_booking(uuid) to anon, authenticated;
-grant execute on function public.cancel_booking(uuid) to anon, authenticated;
-grant execute on function public.reschedule_booking(uuid, date, time) to anon, authenticated;
-grant execute on function public.create_booking(uuid, date, time, text, text, text, text, boolean) to anon, authenticated;
+grant execute on function public.my_bookings(uuid[]) to anon, authenticated;
+grant execute on function public.cancel_booking(uuid, uuid[]) to anon, authenticated;
+grant execute on function public.claim_customer(text, text, boolean, uuid[]) to authenticated;
+grant execute on function public.reschedule_booking(uuid, date, time, uuid[]) to anon, authenticated;
+grant execute on function public.create_booking(uuid, date, time, text, text, text, text, boolean, uuid[]) to anon, authenticated;
 grant execute on function public.is_staff() to anon, authenticated;
 grant execute on function public.normalize_phone(text) to authenticated;

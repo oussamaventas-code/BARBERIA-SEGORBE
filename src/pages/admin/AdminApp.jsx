@@ -1,5 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
-import { AuthProvider, useAuth } from '../../context/AuthContext'
+import { useAuth } from '../../context/AuthContext'
 import { ToastProvider } from '../../components/admin/ui'
 import FullScreenLoader from '../../components/ui/FullScreenLoader'
 import AdminLayout from './AdminLayout'
@@ -24,7 +24,7 @@ function Guard({ children }) {
 export default function AdminApp() {
   if (!isSupabaseConfigured) return <NotConfigured />
   return (
-    <AuthProvider>
+    <>
       <ToastProvider>
         <div className="min-h-screen bg-obsidian text-ivory">
           <Routes>
@@ -42,7 +42,7 @@ export default function AdminApp() {
           </Routes>
         </div>
       </ToastProvider>
-    </AuthProvider>
+    </>
   )
 }
 

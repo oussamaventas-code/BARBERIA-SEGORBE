@@ -6,6 +6,8 @@ import ServicesPage from './pages/public/ServicesPage'
 import BookingPage from './pages/public/BookingPage'
 import ContactPage from './pages/public/ContactPage'
 import { PrivacyPage, LegalNoticePage, CookiesPage } from './pages/public/LegalPages'
+import LaBarberia from './pages/public/LaBarberia'
+import Cuenta from './pages/public/Cuenta'
 import MyBookings from './pages/public/MyBookings'
 import NotFound from './pages/public/NotFound'
 import ScrollManager from './components/ui/ScrollManager'
@@ -23,6 +25,8 @@ export default function App() {
           <Route index element={<Home />} />
           <Route path="servicios" element={<ServicesPage />} />
           <Route path="reservar" element={<BookingPage />} />
+          <Route path="la-barberia" element={<LaBarberia />} />
+          <Route path="cuenta" element={<Cuenta />} />
           <Route path="mis-citas" element={<MyBookings />} />
           <Route path="mis-citas/:token" element={<MyBookings />} />
           <Route path="contacto" element={<ContactPage />} />

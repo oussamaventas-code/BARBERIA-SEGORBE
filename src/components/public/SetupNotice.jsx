@@ -5,7 +5,8 @@ import { useBusiness } from '../../context/BusinessContext'
 export default function SetupNotice() {
   const { configured, error } = useBusiness()
   const [hidden, setHidden] = useState(false)
-  if (hidden || (configured && !error)) return null
+  // Solo en desarrollo: el visitante nunca ve avisos técnicos
+  if (!import.meta.env.DEV || hidden || (configured && !error)) return null
   return (
     <div className="fixed inset-x-3 bottom-3 z-[70] mx-auto max-w-xl rounded-3xl border border-champagne/30 bg-obsidian/95 p-4 text-sm text-ivory shadow-luxe backdrop-blur md:bottom-6">
       <p className="label-mono mb-1">Modo configuración</p>

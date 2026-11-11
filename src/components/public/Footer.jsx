@@ -20,8 +20,8 @@ export default function Footer() {
           <nav aria-label="Navegación del pie">
             <p className={h}>Navegación</p>
             <ul className="space-y-3">
-              <li><Link className={l} to="/">Inicio</Link></li>
               <li><Link className={l} to="/servicios">Servicios</Link></li>
+              <li><Link className={l} to="/la-barberia">La barbería</Link></li>
               <li><Link className={l} to="/reservar">Pedir cita</Link></li>
               <li><Link className={l} to="/mis-citas">Mis citas</Link></li>
               <li><Link className={l} to="/contacto">Contacto</Link></li>

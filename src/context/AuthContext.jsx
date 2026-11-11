@@ -44,6 +44,7 @@ export function AuthProvider({ children }) {
       staff,
       isStaff: Boolean(staff),
       loading,
+      signUp: (email, password) => supabase.auth.signUp({ email, password }),
       signIn: (email, password) => supabase.auth.signInWithPassword({ email, password }),
       signOut: () => supabase.auth.signOut(),
     }),
