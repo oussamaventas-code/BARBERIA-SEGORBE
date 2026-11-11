@@ -9,26 +9,19 @@ Web pública de la barbería y panel privado del propietario, **todo sobre Cloud
 Páginas públicas: `/` (una pantalla), `/servicios`, `/reservar`, `/mis-citas`, `/cuenta`, `/la-barberia`, `/contacto`.
 Panel: `/admin/login`, `/admin`, `/admin/citas`, `/admin/clientes`, `/admin/servicios`, `/admin/finanzas`, `/admin/configuracion`.
 
-## Publicar en tu cuenta de Cloudflare (una sola vez)
+## Publicar en tu cuenta de Cloudflare (todo desde el navegador)
 
-Necesita Node 20+. Cloudflare **no tiene que ser la misma cuenta que GitHub**: se usa la que elijas al hacer login.
+Cloudflare **no tiene que ser la misma cuenta que GitHub**. Se usa la del panel donde estés conectado.
 
-```bash
-npm install
-npx wrangler login
-```
+1. **Base de datos:** en Cloudflare → *Storage & Databases → D1 → Create* (puede llamarse como quieras). Copia su **Database ID** (en *Settings* de la base de datos) y pégalo en `wrangler.toml`, en `database_id`.
+2. **Publicar:** conecta el repositorio de GitHub al Worker `barberia-segorbe` (*Workers & Pages → Create → Import a repository*). Cada vez que se fusiona un cambio en `main`, Cloudflare compila y publica solo. Comando de build `npm run build`; de deploy `npx wrangler deploy`.
+3. **Clave de instalación:** en el Worker → *Settings → Variables and Secrets → Add*. Tipo **Secret**, nombre `SETUP_KEY`, valor una clave larga inventada (20+ caracteres). Guarda y espera a que se despliegue.
+4. **Primera puesta en marcha:** abre `https://TU-WORKER.workers.dev/admin/setup`, escribe esa clave, tu correo y una contraseña (10+ caracteres) y pulsa el botón. Crea las tablas, los datos iniciales y tu usuario, y la pantalla **se bloquea sola** al terminar. Después entras en `/admin/login`.
+5. **Datos del negocio:** en el panel → *Configuración* (horario real, datos legales, reseñas) y *Servicios* (precios y duraciones).
 
-En el navegador que se abre, entra con **tu** cuenta de Cloudflare y acepta. Después, un solo comando (con tu correo y una contraseña larga para el panel):
+Alternativa con consola (si prefieres): `npx wrangler login` y `npm run setup -- tu@correo.com "contraseña-larga"` hacen los pasos 1, 4 y la publicación automáticamente.
 
-```bash
-npm run setup -- tu@correo.com "una-contraseña-larga"
-```
-
-Hace todo en orden: crea la base de datos D1 en tu cuenta, aplica el esquema y los datos iniciales, crea tu usuario de propietario y publica la web y la API. Al terminar muestra una URL `*.workers.dev`. El dominio propio se añade luego en *Workers & Pages → barberia-segorbe → Settings → Domains*.
-
-Después entra en `/admin/login` → **Configuración** (horario real, datos legales, enlace de reseñas) y **Servicios** (precios y duraciones).
-
-Para actualizar la web más adelante: `npm run deploy`. Si cambia el esquema: `npm run db:migrate`.
+Dominio propio: *Workers & Pages → barberia-segorbe → Settings → Domains*. Si el esquema cambia en el futuro: `npm run db:migrate`.
 
 ## Desarrollo local
 

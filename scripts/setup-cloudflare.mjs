@@ -23,7 +23,7 @@ let toml = readFileSync('wrangler.toml', 'utf8')
 
 if (toml.includes(PLACEHOLDER)) {
   console.log('\n→ Creando la base de datos en tu cuenta de Cloudflare…')
-  const out = npx(['wrangler', 'd1', 'create', 'barberia-segorbe', '--location', 'weur'], true)
+  const out = npx(['wrangler', 'd1', 'create', 'barberia', '--location', 'weur'], true)
   console.log(out)
   const id = out.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/)?.[0]
   if (!id) {
@@ -36,7 +36,7 @@ if (toml.includes(PLACEHOLDER)) {
 }
 
 console.log('\n→ Aplicando esquema y datos iniciales…')
-npx(['wrangler', 'd1', 'migrations', 'apply', 'barberia-segorbe', '--remote'])
+npx(['wrangler', 'd1', 'migrations', 'apply', 'barberia', '--remote'])
 
 console.log('\n→ Creando la cuenta del propietario…')
 execFileSync('node', ['scripts/create-owner.mjs', email, password, '--remote'], { stdio: 'inherit' })

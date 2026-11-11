@@ -1,4 +1,4 @@
-name = "barberia-segorbe"
+name = "barberia-segorbe2"
 main = "worker/index.js"
 compatibility_date = "2025-09-01"
 
@@ -11,7 +11,6 @@ run_worker_first = ["/api/*"]
 
 [[d1_databases]]
 binding = "DB"
-database_name = "barberia-segorbe"
-# Lo rellena automáticamente `npm run setup` al crear la base de datos en tu cuenta
-database_id = "REEMPLAZAR-CON-EL-ID-DE-D1"
+database_name = "barberia"
+database_id = "04af07bc-6801-40b8-91a4-e12dba258f1a"
 migrations_dir = "migrations"
