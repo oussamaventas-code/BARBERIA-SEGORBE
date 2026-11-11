@@ -1,42 +1,70 @@
-# Barbería Segorbe · Web + CRM/ERP
+# Barbería Segorbe · Web + gestión de citas
 
-Web pública cinematográfica y panel privado de gestión sobre **una misma base de datos Supabase**.
+Web pública de la barbería y panel privado del propietario, **todo sobre Cloudflare**:
 
-- **Stack:** React 19 · Vite · Tailwind 3.4.17 · GSAP 3 (ScrollTrigger, SplitText) · Lucide · Supabase (Postgres, Auth, RLS)
-- **Web pública:** `/`, `/servicios`, `/reservar`, `/contacto` (+ privacidad, aviso legal, cookies)
-- **Panel privado:** `/admin/login`, `/admin` (inicio), `/admin/citas`, `/admin/clientes`, `/admin/servicios`, `/admin/finanzas`, `/admin/configuracion`
+- **Base de datos:** Cloudflare **D1** (`barberia-segorbe`, región WEUR), que crea `npm run setup` en tu cuenta.
+- **Backend:** un **Worker** (`worker/`) con la API en `/api/*`. El navegador nunca habla con la base de datos.
+- **Web:** React 19 · Vite · Tailwind 3.4.17 · GSAP · Lucide, servida por el mismo Worker (mismo dominio → cookies seguras).
 
-## Puesta en marcha (lo que necesita el propietario)
+Páginas públicas: `/` (una pantalla), `/servicios`, `/reservar`, `/mis-citas`, `/cuenta`, `/la-barberia`, `/contacto`.
+Panel: `/admin/login`, `/admin`, `/admin/citas`, `/admin/clientes`, `/admin/servicios`, `/admin/finanzas`, `/admin/configuracion`.
 
-1. **Crear proyecto en [supabase.com](https://supabase.com)** (plan gratuito sirve).
-2. En **SQL Editor** ejecutar, en orden: `supabase/migrations/20261111000001_init.sql` y después `supabase/seed.sql`.
-3. En **Authentication → Users → Add user** crear el usuario del propietario (email + contraseña). Desactivar el registro público en *Authentication → Providers → Email → "Allow new users to sign up"*.
-4. Dar acceso al panel a ese usuario (SQL Editor):
-   ```sql
-   insert into public.staff (user_id, display_name)
-   select id, 'Propietario' from auth.users where email = 'EMAIL_DEL_PROPIETARIO';
-   ```
-5. Copiar `.env.example` a `.env` y rellenar `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` (Project Settings → API). **Nunca** uses la `service_role key` en el frontend.
-6. `npm install && npm run dev` (desarrollo) o `npm run build` (producción; carpeta `dist/`). Hay rewrites SPA para Vercel (`vercel.json`) y Netlify/Cloudflare (`public/_redirects`).
-7. Entrar en `/admin/login` → **Configuración**: revisar horario real, datos legales y enlace de reseñas; **Servicios**: poner precios y duraciones.
+## Publicar en tu cuenta de Cloudflare (una sola vez)
+
+Necesita Node 20+. Cloudflare **no tiene que ser la misma cuenta que GitHub**: se usa la que elijas al hacer login.
+
+```bash
+npm install
+npx wrangler login
+```
+
+En el navegador que se abre, entra con **tu** cuenta de Cloudflare y acepta. Después, un solo comando (con tu correo y una contraseña larga para el panel):
+
+```bash
+npm run setup -- tu@correo.com "una-contraseña-larga"
+```
+
+Hace todo en orden: crea la base de datos D1 en tu cuenta, aplica el esquema y los datos iniciales, crea tu usuario de propietario y publica la web y la API. Al terminar muestra una URL `*.workers.dev`. El dominio propio se añade luego en *Workers & Pages → barberia-segorbe → Settings → Domains*.
+
+Después entra en `/admin/login` → **Configuración** (horario real, datos legales, enlace de reseñas) y **Servicios** (precios y duraciones).
+
+Para actualizar la web más adelante: `npm run deploy`. Si cambia el esquema: `npm run db:migrate`.
+
+## Desarrollo local
+
+```bash
+npm run db:migrate:local                                   # crea la D1 local con esquema y datos
+node scripts/create-owner.mjs dueno@prueba.es "clave-de-prueba-1"
+npm run build && npm run dev:api                           # web + API en http://localhost:8787
+```
+
+(`npm run dev` arranca Vite con recarga en caliente y reenvía `/api` al Worker local de `dev:api`.)
+
+## Cómo funciona la identidad del cliente
+
+- **Sin cuenta (invitado):** nombre + teléfono. Un teléfono = un cliente. El dispositivo guarda un token secreto y la web **lo reconoce** (saludo, datos rellenados, *Mis citas*, cambiar y cancelar).
+- **Con cuenta (email + contraseña):** además ve y gestiona sus citas desde cualquier móvil; al crearla se vincula el historial del dispositivo.
+- **El teléfono no es una contraseña:** teclear el teléfono de otra persona no da acceso a sus citas ni a sus datos. Si alguien con historial intenta crear cuenta sin ser reconocido, se le pide entrar desde su móvil o llamar.
+- El panel marca **Habitual** (3+ visitas completadas) y **Cuenta**. Cancelar/cambiar: hasta X horas antes (Configuración); un cambio vuelve a *pendiente*.
+- Las cuentas de cliente **no verifican el email** (no hay servicio de correo conectado): el email no sirve como prueba de identidad ni da acceso a datos de nadie más.
 
 ## Seguridad
 
-- RLS activo en todas las tablas. Un visitante anónimo solo puede leer negocio, horario y servicios activos, consultar huecos libres y crear solicitudes mediante `create_booking`.
-- Clientes, citas, pagos, gastos, bloqueos y notas solo son accesibles a usuarios de la tabla `staff`. Tener una cuenta en Auth **no** basta.
-- La reserva es atómica: bloqueo consultivo por día + trigger de integridad en `appointments` (también protege las altas manuales). Probado con 6 reservas simultáneas al mismo hueco → 1 aceptada.
-- Un teléfono = un cliente (índice único con teléfono normalizado).
+- La D1 solo es accesible desde el Worker. Las rutas `/api/admin/*` exigen sesión de personal; una cuenta de cliente recibe 403.
+- Sesiones: token aleatorio en cookie `HttpOnly; SameSite=Lax; Secure`; en la base de datos solo se guarda su hash (SHA-256). Contraseñas: PBKDF2-SHA256 con sal. Límite de intentos en login, alta y reservas. Protección CSRF por comprobación de origen.
+- La agenda es **atómica**: los triggers de D1 rechazan solapes (según capacidad y margen) y bloqueos dentro de la propia sentencia; D1 serializa las escrituras. Probado con 8 reservas simultáneas al mismo hueco → 1 aceptada.
+- Datos de clientes, citas, pagos y gastos nunca salen en rutas públicas.
 
 ## Reglas de negocio
 
 - Una reserva web nace **Pendiente**; nunca se muestra como confirmada hasta que el propietario la confirma.
-- Los **ingresos** solo existen cuando se registra un cobro; una cita reservada no suma.
-- Sin precio configurado, la web muestra «Consultar precio». No hay precios, nombres, testimonios ni cifras inventados. Los datos DEMO de la landing están etiquetados como tales.
-- WhatsApp: enlaces `wa.me` con mensaje predefinido; el mensaje lo envía el usuario, no el sistema.
+- Los **ingresos** solo existen cuando se registra un cobro; una cita reservada no suma. No es un programa de contabilidad ni de facturación certificada.
+- Sin precio configurado, la web muestra «Consultar precio». No hay precios, nombres, testimonios ni cifras inventados.
+- WhatsApp: enlaces `wa.me` con mensaje predefinido; lo envía el usuario, no el sistema.
 
-## Pendiente de datos externos
+## Pendiente de datos del negocio
 
-- Horario definitivo y días de apertura (el seed carga 10:00–20:30 de lunes a sábado como **referencia no verificada**; el panel lo avisa hasta que se guarda).
-- Precios y duraciones de servicios; URL de reseñas de Google; datos fiscales para los textos legales (revisar con un profesional).
-- Fotografías: se usan imágenes de Unsplash (`src/lib/images.js` y campo imagen de cada servicio); conviene sustituirlas por fotos reales del local.
-- Avisos automáticos por email/WhatsApp no están implementados (requerirían un proveedor y consentimiento): el panel muestra las solicitudes pendientes.
+- Horario definitivo y días de apertura (se carga 10:00–20:30 de lunes a sábado como **referencia no verificada**; el panel lo avisa hasta que se guarda).
+- Precios y duraciones; URL de reseñas de Google; datos fiscales para los textos legales (revisar con un profesional).
+- Fotografías: hoy son de Unsplash (`src/lib/images.js` y el campo imagen de cada servicio); conviene sustituirlas por fotos reales del local.
+- Avisos automáticos por email/WhatsApp: no implementados (requieren proveedor y consentimiento); el panel muestra las solicitudes pendientes.

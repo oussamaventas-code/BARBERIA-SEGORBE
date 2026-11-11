@@ -39,7 +39,7 @@ export default function Manifesto() {
   }, [])
 
   return (
-    <section ref={root} id="barberia" className="relative flex min-h-[100svh] items-center overflow-hidden bg-obsidian py-28">
+    <section ref={root} id="barberia" className="relative flex min-h-[85svh] items-center overflow-hidden bg-obsidian py-28">
       <div className="absolute inset-x-0 -top-[12%] bottom-[-12%]" data-parallax aria-hidden>
         <Img src={IMAGES.tools} alt="" className="h-full w-full" imgClassName="grayscale-[0.4] contrast-[1.1]" />
       </div>

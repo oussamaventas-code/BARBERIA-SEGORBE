@@ -33,7 +33,7 @@ export default function Clientes() {
           {list.map((c) => (
             <li key={c.id} className="card flex items-center gap-3 p-4 !rounded-3xl transition-colors hover:border-champagne/40">
               <Link to={`/admin/clientes/${c.id}`} className="min-w-0 flex-1">
-                <p className="truncate font-medium">{c.name}</p>
+                <p className="flex items-center gap-2 truncate font-medium">{c.name}{c.regular && <span className="rounded-full bg-champagne/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-champagne">Habitual</span>}{c.has_account && <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] uppercase tracking-wider text-steel">Cuenta</span>}</p>
                 <p className="font-mono text-xs text-steel">{displayPhone(c.phone)}</p>
                 <p className="mt-2 text-[11px] text-steel">{c.visits} visita{c.visits === 1 ? '' : 's'}{c.last_visit ? ` · última ${formatShortDate(c.last_visit)}` : ''} · {money(c.total_spent)}</p>
               </Link>

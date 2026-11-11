@@ -9,12 +9,21 @@ const CODES = {
   INVALID_SERVICE: 'Ese servicio ya no está disponible.',
   BOOKING_DISABLED: 'La reserva online está desactivada temporalmente. Escríbenos por WhatsApp.',
   TOO_MANY_PENDING: 'Ya tienes solicitudes pendientes. Contacta con la barbería para gestionarlas.',
+  NOT_FOUND: 'No encontramos esa cita. Revisa el enlace o llámanos.',
+  CANNOT_MODIFY: 'Esta cita ya no se puede cambiar por la web. Llámanos y lo resolvemos.',
+  PHONE_IN_USE: 'Ese teléfono ya tiene historial en la barbería. Entra desde el móvil donde reservaste o llámanos para vincularlo.',
+  NOT_AUTH: 'Inicia sesión para continuar.',
+  UNAUTHENTICATED: 'Tu sesión ha caducado. Vuelve a entrar.',
+  FORBIDDEN: 'No tienes permiso para realizar esta acción.',
+  RATE_LIMITED: 'Demasiados intentos. Espera unos minutos e inténtalo de nuevo.',
+  HAS_DEPENDENCIES: 'No se puede eliminar porque tiene datos asociados (por ejemplo, citas). Puedes desactivarlo.',
   DUPLICATE: 'Ya existe una solicitud para ese horario.',
 }
 
-/** Traduce errores de Supabase/PostgreSQL a mensajes comprensibles */
+/** Traduce errores de la API a mensajes comprensibles */
 export function friendlyError(error) {
   if (!error) return ''
+  if (error.userMessage) return CODES[error.code] || error.userMessage
   const msg = error.message || String(error)
   const code = Object.keys(CODES).find((c) => msg.includes(c))
   if (code) return CODES[code]
@@ -26,6 +35,9 @@ export function friendlyError(error) {
   if (error.code === '23503') return 'No se puede eliminar porque tiene datos asociados (por ejemplo, citas). Puedes desactivarlo.'
   if (error.code === '23514') return 'Algún dato no es válido. Revisa el formulario.'
   if (error.code === '42501' || msg.includes('permission denied')) return 'No tienes permiso para realizar esta acción.'
+  if (msg.includes('User already registered')) return 'Ya existe una cuenta con ese email. Prueba a entrar.'
+  if (msg.includes('Password should be')) return 'La contraseña debe tener al menos 8 caracteres.'
+  if (msg.includes('Email not confirmed')) return 'Confirma tu email: te hemos enviado un enlace.'
   if (msg.includes('Invalid login credentials')) return 'Email o contraseña incorrectos.'
   if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) return 'Sin conexión. Comprueba tu internet e inténtalo de nuevo.'
   return 'Ha ocurrido un error inesperado. Inténtalo de nuevo.'

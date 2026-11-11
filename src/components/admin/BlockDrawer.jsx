@@ -4,7 +4,7 @@ import { Drawer, Field, useToast } from './ui'
 import * as api from '../../lib/api'
 import { friendlyError } from '../../lib/errors'
 import { useBusiness } from '../../context/BusinessContext'
-import { todayISO, zonedToISO, addDays } from '../../lib/format'
+import { todayISO, addDays } from '../../lib/format'
 
 /** Bloquear horario: franja concreta, día completo o varios días (vacaciones, festivos) */
 export default function BlockDrawer({ open, onClose, defaultDate, onSaved }) {
@@ -24,10 +24,11 @@ export default function BlockDrawer({ open, onClose, defaultDate, onSaved }) {
   async function save() {
     setBusy(true); setError('')
     try {
-      const start = zonedToISO(f.from, f.allDay ? '00:00' : f.start, tz)
-      const end = f.allDay ? zonedToISO(addDays(f.to || f.from, 1), '00:00', tz) : zonedToISO(f.from, f.end, tz)
-      if (new Date(end) <= new Date(start)) throw { message: 'El fin debe ser posterior al inicio.', code: 'custom' }
-      await api.createBlock({ start_datetime: start, end_datetime: end, reason: f.reason || null })
+      // Hora local del negocio en texto 'YYYY-MM-DD HH:MM' (sin conversiones de zona)
+      const start = `${f.from} ${f.allDay ? '00:00' : f.start}`
+      const end = f.allDay ? `${addDays(f.to || f.from, 1)} 00:00` : `${f.from} ${f.end}`
+      if (end <= start) throw { message: 'El fin debe ser posterior al inicio.', code: 'custom' }
+      await api.createBlock({ start_local: start, end_local: end, reason: f.reason || null })
       toast.success('Horario bloqueado'); onSaved?.(); onClose()
     } catch (e) { setError(e.code === 'custom' ? e.message : friendlyError(e)) } finally { setBusy(false) }
   }

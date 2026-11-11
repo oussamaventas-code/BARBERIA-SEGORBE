@@ -5,10 +5,10 @@ import { useBusiness } from '../../context/BusinessContext'
 import { telLink } from '../../lib/format'
 
 const LINKS = [
-  { to: '/', label: 'Inicio', end: true },
   { to: '/servicios', label: 'Servicios' },
-  { to: '/#barberia', label: 'La barbería' },
+  { to: '/la-barberia', label: 'La barbería' },
   { to: '/contacto', label: 'Contacto' },
+  { to: '/mis-citas', label: 'Mis citas' },
 ]
 
 export default function Navbar() {

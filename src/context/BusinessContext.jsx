@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
-import { supabase, isSupabaseConfigured } from '../lib/supabase'
+import { http } from '../lib/http'
 
 // Datos confirmados del negocio. Se usan solo mientras carga la BD o si
 // Supabase aún no está configurado. Nada de precios ni horarios inventados.
@@ -26,22 +26,18 @@ export function BusinessProvider({ children }) {
   const [settings, setSettings] = useState(FALLBACK)
   const [hours, setHours] = useState([])
   const [services, setServices] = useState([])
-  const [loading, setLoading] = useState(isSupabaseConfigured)
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
   const load = useCallback(async () => {
-    if (!isSupabaseConfigured) return
     setLoading(true)
-    const [s, h, sv] = await Promise.all([
-      supabase.from('business_settings').select('*').eq('id', 1).maybeSingle(),
-      supabase.from('opening_hours').select('*').order('weekday').order('opening_time'),
-      supabase.from('services').select('*').eq('active', true).order('sort_order').order('name'),
-    ])
-    if (s.error || h.error || sv.error) setError(s.error || h.error || sv.error)
-    else setError(null)
-    if (s.data) setSettings({ ...FALLBACK, ...s.data })
-    setHours(h.data || [])
-    setServices(sv.data || [])
+    try {
+      const d = await http.get('/public')
+      setSettings({ ...FALLBACK, ...d.settings })
+      setHours(d.hours || [])
+      setServices(d.services || [])
+      setError(null)
+    } catch (e) { setError(e) }
     setLoading(false)
   }, [])
 
@@ -50,7 +46,7 @@ export function BusinessProvider({ children }) {
   }, [load])
 
   const value = useMemo(
-    () => ({ settings, hours, services, loading, error, reload: load, configured: isSupabaseConfigured }),
+    () => ({ settings, hours, services, loading, error, reload: load, configured: true }),
     [settings, hours, services, loading, error, load],
   )
   return <BusinessContext.Provider value={value}>{children}</BusinessContext.Provider>

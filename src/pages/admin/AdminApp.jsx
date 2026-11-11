@@ -1,5 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
-import { AuthProvider, useAuth } from '../../context/AuthContext'
+import { useAuth } from '../../context/AuthContext'
 import { ToastProvider } from '../../components/admin/ui'
 import FullScreenLoader from '../../components/ui/FullScreenLoader'
 import AdminLayout from './AdminLayout'
@@ -11,7 +11,6 @@ import ClienteDetalle from './ClienteDetalle'
 import Servicios from './Servicios'
 import Finanzas from './Finanzas'
 import Configuracion from './Configuracion'
-import { isSupabaseConfigured } from '../../lib/supabase'
 
 function Guard({ children }) {
   const { loading, session, isStaff } = useAuth()
@@ -22,9 +21,8 @@ function Guard({ children }) {
 }
 
 export default function AdminApp() {
-  if (!isSupabaseConfigured) return <NotConfigured />
   return (
-    <AuthProvider>
+    <>
       <ToastProvider>
         <div className="min-h-screen bg-obsidian text-ivory">
           <Routes>
@@ -42,18 +40,6 @@ export default function AdminApp() {
           </Routes>
         </div>
       </ToastProvider>
-    </AuthProvider>
-  )
-}
-
-function NotConfigured() {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-obsidian p-6 text-ivory">
-      <div className="max-w-lg rounded-[2rem] border border-champagne/25 bg-slate p-8">
-        <p className="label-mono mb-3">Panel privado</p>
-        <h1 className="text-2xl font-semibold">Falta conectar Supabase</h1>
-        <p className="mt-3 text-sm text-steel">Crea un archivo <code className="font-mono text-champagne">.env</code> con <code className="font-mono text-champagne">VITE_SUPABASE_URL</code> y <code className="font-mono text-champagne">VITE_SUPABASE_ANON_KEY</code> (ver README) y reinicia la aplicación.</p>
-      </div>
-    </div>
+    </>
   )
 }

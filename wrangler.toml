@@ -1,0 +1,17 @@
+name = "barberia-segorbe"
+main = "worker/index.js"
+compatibility_date = "2025-09-01"
+
+# La web (dist/) y la API (/api/*) salen del mismo Worker: mismo dominio, cookies seguras.
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+run_worker_first = ["/api/*"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "barberia-segorbe"
+# Lo rellena automáticamente `npm run setup` al crear la base de datos en tu cuenta
+database_id = "REEMPLAZAR-CON-EL-ID-DE-D1"
+migrations_dir = "migrations"

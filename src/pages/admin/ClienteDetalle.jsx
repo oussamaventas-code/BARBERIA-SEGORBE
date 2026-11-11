@@ -28,6 +28,7 @@ export default function ClienteDetalle() {
       <div className="card p-6 sm:p-8">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div><h1 className="text-2xl font-semibold tracking-tighter sm:text-3xl">{c.name}</h1>
+            {(c.regular || c.has_account) && <p className="mt-2 flex gap-2 text-[10px] font-semibold uppercase tracking-wider">{c.regular && <span className="rounded-full bg-champagne/15 px-2 py-0.5 text-champagne">Cliente habitual</span>}{c.has_account && <span className="rounded-full bg-white/10 px-2 py-0.5 text-steel">Tiene cuenta</span>}</p>}
             <p className="mt-1 font-mono text-sm text-steel">{displayPhone(c.phone)}{c.email ? ` · ${c.email}` : ''}</p>
             <p className="mt-1 text-xs text-steel">Alta: {formatShortDate(c.created_at.slice(0, 10))}</p></div>
           <div className="flex flex-wrap gap-2">
