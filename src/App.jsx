@@ -6,6 +6,7 @@ import ServicesPage from './pages/public/ServicesPage'
 import BookingPage from './pages/public/BookingPage'
 import ContactPage from './pages/public/ContactPage'
 import { PrivacyPage, LegalNoticePage, CookiesPage } from './pages/public/LegalPages'
+import MyBookings from './pages/public/MyBookings'
 import NotFound from './pages/public/NotFound'
 import ScrollManager from './components/ui/ScrollManager'
 import FullScreenLoader from './components/ui/FullScreenLoader'
@@ -22,6 +23,8 @@ export default function App() {
           <Route index element={<Home />} />
           <Route path="servicios" element={<ServicesPage />} />
           <Route path="reservar" element={<BookingPage />} />
+          <Route path="mis-citas" element={<MyBookings />} />
+          <Route path="mis-citas/:token" element={<MyBookings />} />
           <Route path="contacto" element={<ContactPage />} />
           <Route path="privacidad" element={<PrivacyPage />} />
           <Route path="aviso-legal" element={<LegalNoticePage />} />

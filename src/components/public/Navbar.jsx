@@ -9,6 +9,7 @@ const LINKS = [
   { to: '/servicios', label: 'Servicios' },
   { to: '/#barberia', label: 'La barbería' },
   { to: '/contacto', label: 'Contacto' },
+  { to: '/mis-citas', label: 'Mis citas' },
 ]
 
 export default function Navbar() {

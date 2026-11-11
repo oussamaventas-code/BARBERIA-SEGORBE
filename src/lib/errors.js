@@ -9,6 +9,8 @@ const CODES = {
   INVALID_SERVICE: 'Ese servicio ya no está disponible.',
   BOOKING_DISABLED: 'La reserva online está desactivada temporalmente. Escríbenos por WhatsApp.',
   TOO_MANY_PENDING: 'Ya tienes solicitudes pendientes. Contacta con la barbería para gestionarlas.',
+  NOT_FOUND: 'No encontramos esa cita. Revisa el enlace o llámanos.',
+  CANNOT_MODIFY: 'Esta cita ya no se puede cambiar por la web. Llámanos y lo resolvemos.',
   DUPLICATE: 'Ya existe una solicitud para ese horario.',
 }
 

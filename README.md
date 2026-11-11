@@ -3,7 +3,7 @@
 Web pública cinematográfica y panel privado de gestión sobre **una misma base de datos Supabase**.
 
 - **Stack:** React 19 · Vite · Tailwind 3.4.17 · GSAP 3 (ScrollTrigger, SplitText) · Lucide · Supabase (Postgres, Auth, RLS)
-- **Web pública:** `/`, `/servicios`, `/reservar`, `/contacto` (+ privacidad, aviso legal, cookies)
+- **Web pública:** `/`, `/servicios`, `/reservar`, `/mis-citas`, `/contacto` (+ privacidad, aviso legal, cookies)
 - **Panel privado:** `/admin/login`, `/admin` (inicio), `/admin/citas`, `/admin/clientes`, `/admin/servicios`, `/admin/finanzas`, `/admin/configuracion`
 
 ## Puesta en marcha (lo que necesita el propietario)
@@ -26,6 +26,10 @@ Web pública cinematográfica y panel privado de gestión sobre **una misma base
 - Clientes, citas, pagos, gastos, bloqueos y notas solo son accesibles a usuarios de la tabla `staff`. Tener una cuenta en Auth **no** basta.
 - La reserva es atómica: bloqueo consultivo por día + trigger de integridad en `appointments` (también protege las altas manuales). Probado con 6 reservas simultáneas al mismo hueco → 1 aceptada.
 - Un teléfono = un cliente (índice único con teléfono normalizado).
+
+## Autogestión del cliente (sin cuenta)
+
+Al reservar, el cliente recibe un enlace secreto (`/mis-citas/<token>`) y su navegador lo recuerda. Desde ahí puede **cambiar día/hora o cancelar solo esa cita** hasta X horas antes (Configuración → «Cancelar/cambiar hasta»). Un cambio vuelve a quedar *pendiente* hasta que la barbería lo confirme. Si pierde el enlace, la barbería gestiona la cita desde el panel.
 
 ## Reglas de negocio
 

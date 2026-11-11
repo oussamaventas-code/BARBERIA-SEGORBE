@@ -109,6 +109,7 @@ create table if not exists public.business_settings (
   max_advance_days      integer not null default 60 check (max_advance_days between 1 and 365),
   capacity              integer not null default 1 check (capacity between 1 and 20),
   max_pending_per_phone integer not null default 3 check (max_pending_per_phone between 1 and 20),
+  cancel_min_hours      integer not null default 2 check (cancel_min_hours between 0 and 168),
   online_booking_enabled boolean not null default true,
   confirmation_message  text not null default
     'Hemos recibido tu solicitud. Te confirmaremos la cita lo antes posible por teléfono o WhatsApp.',
@@ -223,6 +224,7 @@ create table if not exists public.appointments (
   end_time         time not null,
   status           public.appointment_status not null default 'pending',
   customer_notes   text check (customer_notes is null or length(customer_notes) <= 500),
+  manage_token     uuid not null default gen_random_uuid(),
   internal_notes   text,
   source           text not null default 'admin' check (source in ('admin', 'web')),
   created_at       timestamptz not null default now(),
@@ -233,6 +235,7 @@ create index if not exists appointments_date_idx on public.appointments (appoint
 create index if not exists appointments_customer_idx on public.appointments (customer_id);
 create index if not exists appointments_service_idx on public.appointments (service_id);
 create index if not exists appointments_status_idx on public.appointments (status);
+create unique index if not exists appointments_manage_token_key on public.appointments (manage_token);
 
 drop trigger if exists trg_appointments_updated on public.appointments;
 create trigger trg_appointments_updated
@@ -362,7 +365,7 @@ create trigger trg_appointments_guard
 -- =====================================================================
 -- Disponibilidad (pública, sin exponer datos personales)
 -- =====================================================================
-create or replace function public.get_available_slots(p_service_id uuid, p_date date)
+create or replace function public.get_available_slots(p_service_id uuid, p_date date, p_exclude_appointment uuid default null)
 returns table (slot_time time)
 language plpgsql
 stable
@@ -408,6 +411,7 @@ begin
         select count(*) into v_overlap
         from public.appointments a
         where a.appointment_date = p_date
+          and a.id is distinct from p_exclude_appointment
           and a.status in ('pending', 'confirmed', 'completed')
           and a.start_time < (v_end + make_interval(mins => s.buffer_minutes))
           and (a.end_time + make_interval(mins => s.buffer_minutes)) > v_t;
@@ -429,7 +433,7 @@ begin
 end;
 $$;
 
-create or replace function public.get_available_days(p_service_id uuid, p_from date, p_to date)
+create or replace function public.get_available_days(p_service_id uuid, p_from date, p_to date, p_exclude_appointment uuid default null)
 returns table (day date, slots integer)
 language plpgsql
 stable
@@ -445,7 +449,7 @@ begin
   d := p_from;
   while d <= p_to loop
     day := d;
-    select count(*)::integer into slots from public.get_available_slots(p_service_id, d);
+    select count(*)::integer into slots from public.get_available_slots(p_service_id, d, p_exclude_appointment);
     return next;
     d := d + 1;
   end loop;
@@ -480,6 +484,7 @@ declare
   v_end        time;
   v_pending    integer;
   v_appt       uuid;
+  v_token      uuid;
   v_email      text;
 begin
   if not coalesce(p_privacy_accepted, false) then
@@ -561,10 +566,11 @@ begin
     (customer_id, service_id, appointment_date, start_time, end_time, status, customer_notes, source)
   values
     (v_customer, p_service_id, p_date, p_start_time, v_end, 'pending', nullif(trim(coalesce(p_notes, '')), ''), 'web')
-  returning id into v_appt;
+  returning id, manage_token into v_appt, v_token;
 
   return jsonb_build_object(
     'appointment_id', v_appt,
+    'manage_token', v_token,
     'status', 'pending',
     'date', p_date,
     'start_time', to_char(p_start_time, 'HH24:MI'),
@@ -572,6 +578,106 @@ begin
     'service_name', v_service.name,
     'message', s.confirmation_message
   );
+end;
+$$;
+
+-- =====================================================================
+-- Autogestión del cliente SIN cuenta: enlace secreto (manage_token)
+-- El token solo lo recibe quien reserva. Permite ver, cambiar y cancelar
+-- ÚNICAMENTE esa cita y no expone datos de ninguna otra.
+-- =====================================================================
+create or replace function public.get_booking(p_token uuid)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  s public.business_settings;
+  r record;
+  v_start timestamptz;
+begin
+  select * into s from public.business_settings where id = 1;
+  select a.*, sv.name as service_name, c.name as customer_name
+    into r
+  from public.appointments a
+  join public.customers c on c.id = a.customer_id
+  left join public.services sv on sv.id = a.service_id
+  where a.manage_token = p_token;
+  if not found then return null; end if;
+
+  v_start := (r.appointment_date + r.start_time) at time zone s.timezone;
+  return jsonb_build_object(
+    'id', r.id,
+    'status', r.status,
+    'date', r.appointment_date,
+    'start_time', to_char(r.start_time, 'HH24:MI'),
+    'end_time', to_char(r.end_time, 'HH24:MI'),
+    'service_id', r.service_id,
+    'service_name', r.service_name,
+    'customer_name', r.customer_name,
+    'cancel_min_hours', s.cancel_min_hours,
+    'can_modify', r.status in ('pending', 'confirmed')
+                  and v_start >= now() + make_interval(hours => s.cancel_min_hours)
+  );
+end;
+$$;
+
+create or replace function public.cancel_booking(p_token uuid)
+returns jsonb
+language plpgsql
+volatile
+security definer
+set search_path = public
+as $$
+declare
+  b jsonb;
+begin
+  b := public.get_booking(p_token);
+  if b is null then raise exception 'NOT_FOUND: No encontramos esa cita' using errcode = 'P0001'; end if;
+  if not (b->>'can_modify')::boolean then
+    raise exception 'CANNOT_MODIFY: Esta cita ya no se puede cancelar online. Llámanos' using errcode = 'P0001';
+  end if;
+  update public.appointments set status = 'cancelled' where manage_token = p_token;
+  return public.get_booking(p_token);
+end;
+$$;
+
+create or replace function public.reschedule_booking(p_token uuid, p_date date, p_start_time time)
+returns jsonb
+language plpgsql
+volatile
+security definer
+set search_path = public
+as $$
+declare
+  b    jsonb;
+  a    public.appointments;
+begin
+  b := public.get_booking(p_token);
+  if b is null then raise exception 'NOT_FOUND: No encontramos esa cita' using errcode = 'P0001'; end if;
+  if not (b->>'can_modify')::boolean then
+    raise exception 'CANNOT_MODIFY: Esta cita ya no se puede cambiar online. Llámanos' using errcode = 'P0001';
+  end if;
+  select * into a from public.appointments where manage_token = p_token;
+  if a.service_id is null then
+    raise exception 'CANNOT_MODIFY: Esta cita no se puede cambiar online. Llámanos' using errcode = 'P0001';
+  end if;
+
+  perform pg_advisory_xact_lock(hashtext('segorbe-agenda'), (p_date - date '2000-01-01'));
+  if not exists (select 1 from public.get_available_slots(a.service_id, p_date, a.id) g where g.slot_time = p_start_time) then
+    raise exception 'SLOT_TAKEN: Ese horario ya no está disponible' using errcode = 'P0001';
+  end if;
+
+  -- Un cambio vuelve a necesitar la confirmación de la barbería
+  update public.appointments
+     set appointment_date = p_date,
+         start_time = p_start_time,
+         end_time = p_start_time + (a.end_time - a.start_time),
+         status = 'pending'
+   where id = a.id;
+  return public.get_booking(p_token);
 end;
 $$;
 
@@ -673,8 +779,11 @@ grant select, insert, update, delete on
   to authenticated;
 grant select on public.staff, public.customer_stats to authenticated;
 
-grant execute on function public.get_available_slots(uuid, date) to anon, authenticated;
-grant execute on function public.get_available_days(uuid, date, date) to anon, authenticated;
+grant execute on function public.get_available_slots(uuid, date, uuid) to anon, authenticated;
+grant execute on function public.get_available_days(uuid, date, date, uuid) to anon, authenticated;
+grant execute on function public.get_booking(uuid) to anon, authenticated;
+grant execute on function public.cancel_booking(uuid) to anon, authenticated;
+grant execute on function public.reschedule_booking(uuid, date, time) to anon, authenticated;
 grant execute on function public.create_booking(uuid, date, time, text, text, text, text, boolean) to anon, authenticated;
 grant execute on function public.is_staff() to anon, authenticated;
 grant execute on function public.normalize_phone(text) to authenticated;

@@ -40,7 +40,7 @@ export default function Configuracion() {
       const patch = {
         business_name: s.business_name, phone: s.phone, whatsapp_phone: normalizePhone(s.whatsapp_phone || s.phone), address: s.address, email: s.email || null,
         google_maps_url: s.google_maps_url || null, google_reviews_url: s.google_reviews_url || null, rating: s.rating === '' ? null : s.rating, review_count: s.review_count === '' ? null : s.review_count,
-        buffer_minutes: s.buffer_minutes, min_notice_minutes: s.min_notice_minutes, max_advance_days: s.max_advance_days, slot_interval_minutes: s.slot_interval_minutes,
+        buffer_minutes: s.buffer_minutes, cancel_min_hours: s.cancel_min_hours, min_notice_minutes: s.min_notice_minutes, max_advance_days: s.max_advance_days, slot_interval_minutes: s.slot_interval_minutes,
         default_duration_minutes: s.default_duration_minutes, capacity: s.capacity, online_booking_enabled: s.online_booking_enabled, confirmation_message: s.confirmation_message,
         legal_owner_name: s.legal_owner_name || null, legal_tax_id: s.legal_tax_id || null, legal_email: s.legal_email || null, hours_verified: true,
       }
@@ -97,6 +97,7 @@ export default function Configuracion() {
             <Field label="Reservar hasta (días)"><input className="input" type="number" min="1" max="365" value={s.max_advance_days ?? 60} onChange={num('max_advance_days')} /></Field>
             <Field label="Intervalo de huecos (min)"><input className="input" type="number" min="5" max="120" step="5" value={s.slot_interval_minutes ?? 15} onChange={num('slot_interval_minutes')} /></Field>
             <Field label="Duración por defecto (min)" hint="Para servicios sin duración"><input className="input" type="number" min="5" step="5" value={s.default_duration_minutes ?? 30} onChange={num('default_duration_minutes')} /></Field>
+            <Field label="Cancelar/cambiar hasta (h antes)" hint="El cliente puede gestionar su cita hasta X horas antes"><input className="input" type="number" min="0" max="168" value={s.cancel_min_hours ?? 2} onChange={num('cancel_min_hours')} /></Field>
             <Field label="Clientes a la vez" hint="Nº de barberos / sillones"><input className="input" type="number" min="1" max="20" value={s.capacity ?? 1} onChange={num('capacity')} /></Field>
           </div>
           <div className="mt-4"><Field label="Mensaje de confirmación"><textarea className="input min-h-[80px]" value={s.confirmation_message || ''} onChange={set('confirmation_message')} /></Field></div>

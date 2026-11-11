@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabase'
 import { useBusiness } from '../../context/BusinessContext'
 import { friendlyError } from '../../lib/errors'
 import { addDays, capitalize, dowOf, formatDate, formatDuration, formatPrice, hhmm, isValidPhone, normalizePhone, todayISO, whatsappLink, WEEKDAYS_SHORT } from '../../lib/format'
+import { saveToken } from '../../lib/myBookings'
 import BookingSteps from '../../components/public/BookingSteps'
 
 const LABELS = ['Servicio', 'Fecha', 'Hora', 'Tus datos', 'Confirmar']
@@ -89,6 +90,7 @@ export default function BookingPage() {
       if (e.message?.includes('SLOT_TAKEN')) { setTime(null); setStep(3); supabase.rpc('get_available_slots', { p_service_id: service.id, p_date: date }).then(({ data: d }) => setSlots((d || []).map((r) => hhmm(r.slot_time)))) }
       return
     }
+    saveToken(data.manage_token)
     setResult(data)
   }
 
@@ -126,7 +128,8 @@ export default function BookingPage() {
             <div><dt className="text-[11px] uppercase tracking-label text-steel">Fecha</dt><dd className="mt-1 text-white">{capitalize(formatDate(result.date))}</dd></div>
             <div><dt className="text-[11px] uppercase tracking-label text-steel">Hora</dt><dd className="mt-1 text-white">{result.start_time}</dd></div>
           </dl>
-          <p className="mt-8 text-sm text-white/60">Si quieres agilizarlo, puedes avisarnos también por WhatsApp (el mensaje no se envía automáticamente: lo envías tú).</p>
+          <p className="mt-8 text-sm text-white/60">Puedes ver, cambiar o cancelar esta cita cuando quieras desde <Link to={`/mis-citas/${result.manage_token}`} className="text-champagne underline underline-offset-4">Mis citas</Link>. Guarda ese enlace por si cambias de móvil.</p>
+          <p className="mt-4 text-sm text-white/60">Si quieres agilizarlo, puedes avisarnos también por WhatsApp (el mensaje no se envía automáticamente: lo envías tú).</p>
           <WaButtons settings={settings} text={`Hola, acabo de solicitar una cita (${result.service_name}, ${formatDate(result.date)} a las ${result.start_time}) a nombre de ${form.name}. ¿Me la podéis confirmar?`} label="Avisar por WhatsApp" />
           <Link to="/" className="link-lift mt-8 inline-block text-sm font-semibold text-champagne">Volver al inicio</Link>
         </div>
