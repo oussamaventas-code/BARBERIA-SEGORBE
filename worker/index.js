@@ -3,6 +3,7 @@
 import { adminRoutes } from './admin.js'
 import { clearCookie, destroySession, getUser, login, rateLimit, requireStaff, signup } from './auth.js'
 import { availableDays, availableSlots, cancelBooking, claimCustomer, createBooking, myBookings, publicBundle, rescheduleBooking } from './booking.js'
+import { runSetup, setupStatus } from './setup.js'
 import { HttpError, bad, json, readJson, tokenList } from './util.js'
 
 const meOut = (u) => (u ? { user: { id: u.id, email: u.email }, staff: u.kind === 'staff' ? { display_name: u.display_name || 'Propietario' } : null } : { user: null, staff: null })
@@ -18,6 +19,10 @@ async function handle(request, env) {
     const origin = request.headers.get('origin')
     if (origin && new URL(origin).host !== url.host) throw bad('FORBIDDEN', 'Origen no permitido', 403)
   }
+
+  /* ---------- Primera puesta en marcha ---------- */
+  if (method === 'GET' && path === '/setup/status') return json(await setupStatus(env))
+  if (method === 'POST' && path === '/setup') return json(await runSetup(env, request))
 
   /* ---------- Público ---------- */
   if (method === 'GET' && path === '/public') return json(await publicBundle(env))

@@ -4,6 +4,7 @@ import { ToastProvider } from '../../components/admin/ui'
 import FullScreenLoader from '../../components/ui/FullScreenLoader'
 import AdminLayout from './AdminLayout'
 import Login from './Login'
+import Setup from './Setup'
 import Dashboard from './Dashboard'
 import Citas from './Citas'
 import Clientes from './Clientes'
@@ -27,6 +28,7 @@ export default function AdminApp() {
         <div className="min-h-screen bg-obsidian text-ivory">
           <Routes>
             <Route path="login" element={<Login />} />
+            <Route path="setup" element={<Setup />} />
             <Route element={<Guard><AdminLayout /></Guard>}>
               <Route index element={<Dashboard />} />
               <Route path="citas" element={<Citas />} />
