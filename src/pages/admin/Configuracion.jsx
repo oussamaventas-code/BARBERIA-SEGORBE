@@ -5,7 +5,7 @@ import BlockDrawer from '../../components/admin/BlockDrawer'
 import * as api from '../../lib/api'
 import { friendlyError } from '../../lib/errors'
 import { useBusiness } from '../../context/BusinessContext'
-import { hhmm, isoToZoned, normalizePhone, WEEK_ORDER, weekdayName } from '../../lib/format'
+import { hhmm, normalizePhone, WEEK_ORDER, weekdayName } from '../../lib/format'
 
 const Section = ({ title, hint, children }) => <section className="card p-5 sm:p-7"><h2 className="text-lg font-semibold">{title}</h2>{hint && <p className="mt-1 text-sm text-steel">{hint}</p>}<div className="mt-5">{children}</div></section>
 
@@ -105,8 +105,8 @@ export default function Configuracion() {
 
         <Section title="Días bloqueados" hint="Vacaciones, festivos y huecos no disponibles.">
           <button onClick={() => setBlockOpen(true)} className="abtn abtn-ghost mb-4"><Ban size={15} /> Bloquear fechas</button>
-          {blocks.data?.length ? <ul className="space-y-2">{blocks.data.map((b) => { const a = isoToZoned(b.start_datetime, settings.timezone), z = isoToZoned(b.end_datetime, settings.timezone); return (
-            <li key={b.id} className="flex items-center justify-between gap-3 rounded-2xl bg-obsidian/50 px-4 py-3 text-sm"><span>{a.date} {a.time} → {z.date} {z.time}{b.reason ? ` · ${b.reason}` : ''}</span><button onClick={() => setDelBlock(b)} className="text-steel hover:text-status-noshow" aria-label="Quitar"><Trash2 size={15} /></button></li>) })}</ul>
+          {blocks.data?.length ? <ul className="space-y-2">{blocks.data.map((b) => { return (
+            <li key={b.id} className="flex items-center justify-between gap-3 rounded-2xl bg-obsidian/50 px-4 py-3 text-sm"><span>{b.start_local} → {b.end_local}{b.reason ? ` · ${b.reason}` : ''}</span><button onClick={() => setDelBlock(b)} className="text-steel hover:text-status-noshow" aria-label="Quitar"><Trash2 size={15} /></button></li>) })}</ul>
             : <p className="text-sm text-steel">No hay bloqueos próximos.</p>}
         </Section>
 

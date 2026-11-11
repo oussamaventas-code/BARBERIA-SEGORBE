@@ -1,0 +1,16 @@
+name = "barberia-segorbe"
+main = "worker/index.js"
+compatibility_date = "2025-09-01"
+
+# La web (dist/) y la API (/api/*) salen del mismo Worker: mismo dominio, cookies seguras.
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+run_worker_first = ["/api/*"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "barberia-segorbe"
+database_id = "51c95c24-db7e-4465-b251-cd56f3493c7e"
+migrations_dir = "migrations"

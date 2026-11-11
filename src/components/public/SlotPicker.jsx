@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { supabase } from '../../lib/supabase'
+import { http } from '../../lib/http'
 import { friendlyError } from '../../lib/errors'
-import { addDays, dowOf, formatDate, hhmm, todayISO, WEEKDAYS_SHORT } from '../../lib/format'
+import { addDays, dowOf, formatDate, todayISO, WEEKDAYS_SHORT } from '../../lib/format'
 import { useBusiness } from '../../context/BusinessContext'
 
 /** Día + hora en una sola pantalla. Se usa al reservar y al cambiar una cita. */
@@ -18,15 +18,15 @@ export default function SlotPicker({ serviceId, excludeId = null, onPick, disabl
   useEffect(() => {
     let off = false
     setDays(null); setDate(null); setSlots(null)
-    supabase.rpc('get_available_days', { p_service_id: serviceId, p_from: today, p_to: addDays(today, horizon), p_exclude_appointment: excludeId })
-      .then(({ data, error: e }) => {
+    http.get('/availability/days', { service: serviceId, from: today, to: addDays(today, horizon), exclude: excludeId })
+      .then((data) => {
         if (off) return
-        if (e) return setError(friendlyError(e))
         const map = Object.fromEntries((data || []).map((r) => [r.day, r.slots]))
         setDays(map)
         const first = Object.keys(map).find((d) => map[d] > 0)
         if (first) setDate(first) // abre ya el primer día con hueco: un toque menos
       })
+      .catch((e) => !off && setError(friendlyError(e)))
     return () => { off = true }
   }, [serviceId, excludeId, today, horizon])
 
@@ -34,8 +34,9 @@ export default function SlotPicker({ serviceId, excludeId = null, onPick, disabl
     if (!date) return
     let off = false
     setSlots(null)
-    supabase.rpc('get_available_slots', { p_service_id: serviceId, p_date: date, p_exclude_appointment: excludeId })
-      .then(({ data, error: e }) => { if (off) return; if (e) setError(friendlyError(e)); else setSlots((data || []).map((r) => hhmm(r.slot_time))) })
+    http.get('/availability/slots', { service: serviceId, date, exclude: excludeId })
+      .then((data) => !off && setSlots(data || []))
+      .catch((e) => !off && setError(friendlyError(e)))
     return () => { off = true }
   }, [serviceId, excludeId, date])
 

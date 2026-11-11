@@ -13,12 +13,17 @@ const CODES = {
   CANNOT_MODIFY: 'Esta cita ya no se puede cambiar por la web. Llámanos y lo resolvemos.',
   PHONE_IN_USE: 'Ese teléfono ya tiene historial en la barbería. Entra desde el móvil donde reservaste o llámanos para vincularlo.',
   NOT_AUTH: 'Inicia sesión para continuar.',
+  UNAUTHENTICATED: 'Tu sesión ha caducado. Vuelve a entrar.',
+  FORBIDDEN: 'No tienes permiso para realizar esta acción.',
+  RATE_LIMITED: 'Demasiados intentos. Espera unos minutos e inténtalo de nuevo.',
+  HAS_DEPENDENCIES: 'No se puede eliminar porque tiene datos asociados (por ejemplo, citas). Puedes desactivarlo.',
   DUPLICATE: 'Ya existe una solicitud para ese horario.',
 }
 
-/** Traduce errores de Supabase/PostgreSQL a mensajes comprensibles */
+/** Traduce errores de la API a mensajes comprensibles */
 export function friendlyError(error) {
   if (!error) return ''
+  if (error.userMessage) return CODES[error.code] || error.userMessage
   const msg = error.message || String(error)
   const code = Object.keys(CODES).find((c) => msg.includes(c))
   if (code) return CODES[code]

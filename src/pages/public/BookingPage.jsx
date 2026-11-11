@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, Check, Clock, Loader2, MessageCircle } from 'lucide-react'
-import { supabase } from '../../lib/supabase'
+import { http } from '../../lib/http'
 import { useBusiness } from '../../context/BusinessContext'
 import { useIdentity } from '../../context/IdentityContext'
 import { useAuth } from '../../context/AuthContext'
@@ -41,16 +41,19 @@ export default function BookingPage() {
     setSubmitting(true); setError('')
     const name = known ? profile.name : form.name.trim()
     const phone = known ? profile.phone : normalizePhone(form.phone)
-    const { data, error: e } = await supabase.rpc('create_booking', {
-      p_service_id: service.id, p_date: slot.date, p_start_time: slot.time, p_name: name, p_phone: phone,
-      p_email: form.email.trim() || null, p_notes: form.notes.trim() || null, p_privacy_accepted: known ? true : form.privacy, p_tokens: getTokens(),
-    })
-    setSubmitting(false)
-    if (e) {
+    let data
+    try {
+      data = await http.post('/bookings', {
+        service_id: service.id, date: slot.date, start_time: slot.time, name, phone,
+        email: form.email.trim() || null, notes: form.notes.trim() || null, privacy_accepted: known ? true : form.privacy, tokens: getTokens(),
+      })
+    } catch (e) {
+      setSubmitting(false)
       setError(friendlyError(e))
-      if (e.message?.includes('SLOT_TAKEN')) setSlot(null) // vuelve a elegir hora
+      if (e.code === 'SLOT_TAKEN') setSlot(null) // vuelve a elegir hora
       return
     }
+    setSubmitting(false)
     remember([data.customer_token, data.manage_token], { name, phone })
     refresh()
     setResult(data)

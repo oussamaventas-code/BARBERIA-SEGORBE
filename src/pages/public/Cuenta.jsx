@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Navigate, useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { Loader2 } from 'lucide-react'
-import { supabase, isSupabaseConfigured } from '../../lib/supabase'
+import { http } from '../../lib/http'
 import { useAuth } from '../../context/AuthContext'
 import { useIdentity } from '../../context/IdentityContext'
 import { friendlyError } from '../../lib/errors'
@@ -25,9 +25,10 @@ export default function Cuenta() {
   const hasDevice = getTokens().length > 0
 
   async function claim(name, phone, privacy) {
-    const { data, error: e } = await supabase.rpc('claim_customer', { p_name: name, p_phone: phone, p_privacy_accepted: privacy, p_tokens: getTokens() })
-    if (e) { setError(friendlyError(e)); return false }
-    clearPending(); apply(data); return true
+    try {
+      apply(await http.post('/my/claim', { name, phone, privacy_accepted: privacy, tokens: getTokens() }))
+      clearPending(); return true
+    } catch (e) { setError(friendlyError(e)); return false }
   }
 
   // Sesión iniciada pero aún sin ficha de cliente: vincúlala (datos pendientes o del dispositivo)
@@ -39,7 +40,6 @@ export default function Cuenta() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, customer, idLoading])
 
-  if (!isSupabaseConfigured) return <Shell title="Tu cuenta"><p className="text-white/60">Las cuentas estarán disponibles en cuanto se conecte la base de datos.</p></Shell>
   if (!authLoading && session && customer) return <Navigate to="/mis-citas" replace />
 
   async function submit(e) {

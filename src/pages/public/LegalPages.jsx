@@ -41,7 +41,7 @@ export function PrivacyPage() {
       <h2>4. Conservación</h2>
       <p>Conservaremos tus datos mientras mantengas relación con el negocio y, después, durante los plazos legales aplicables.</p>
       <h2>5. Destinatarios</h2>
-      <p>No cedemos datos a terceros salvo obligación legal. Utilizamos como encargado del tratamiento al proveedor de infraestructura (Supabase) para alojar la base de datos.</p>
+      <p>No cedemos datos a terceros salvo obligación legal. Utilizamos como encargado del tratamiento a Cloudflare, Inc. para alojar la web y la base de datos.</p>
       <h2>6. Tus derechos</h2>
       <p>Puedes ejercer tus derechos de acceso, rectificación, supresión, oposición, limitación y portabilidad escribiendo a {email} o llamando al {s.phone}, indicando tu nombre y teléfono. Atenderemos tu solicitud en el plazo máximo de un mes. También puedes reclamar ante la Agencia Española de Protección de Datos (www.aepd.es).</p>
     </Doc>

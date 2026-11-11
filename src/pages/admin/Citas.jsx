@@ -7,7 +7,7 @@ import BlockDrawer from '../../components/admin/BlockDrawer'
 import * as api from '../../lib/api'
 import { friendlyError } from '../../lib/errors'
 import { useBusiness } from '../../context/BusinessContext'
-import { addDays, addMonths, capitalize, dowOf, endOfMonth, formatDate, formatMonth, hhmm, isoToZoned, startOfMonth, startOfWeek, STATUS, todayISO, WEEKDAYS_SHORT, zonedToISO } from '../../lib/format'
+import { addDays, addMonths, capitalize, dowOf, formatDate, formatMonth, hhmm, startOfMonth, startOfWeek, STATUS, todayISO, WEEKDAYS_SHORT } from '../../lib/format'
 import { CalendarDays } from 'lucide-react'
 
 const VIEWS = [['day', 'Día'], ['week', 'Semana'], ['month', 'Mes'], ['list', 'Pendientes']]
@@ -32,7 +32,7 @@ export default function Citas() {
   }, [view, cursor, today])
 
   const { data, loading, reload } = useAsync(async () => {
-    const [appts, blocks] = await Promise.all([api.listAppointments(range[0], range[1]), api.listBlocks(zonedToISO(range[0], '00:00', tz), zonedToISO(addDays(range[1], 1), '00:00', tz))])
+    const [appts, blocks] = await Promise.all([api.listAppointments(range[0], range[1]), api.listBlocks(range[0], range[1])])
     return { appts: view === 'list' ? appts.filter((a) => a.status === 'pending') : appts, blocks }
   }, [range[0], range[1], view])
 
@@ -41,7 +41,9 @@ export default function Citas() {
     ;(data?.appts || []).forEach((a) => { (m[a.appointment_date] ||= []).push(a) })
     return m
   }, [data])
-  const blocksOn = (iso) => (data?.blocks || []).filter((b) => { const s = isoToZoned(b.start_datetime, tz).date; const e = isoToZoned(new Date(new Date(b.end_datetime).getTime() - 1).toISOString(), tz).date; return s <= iso && e >= iso })
+  // Bloqueos en hora local 'YYYY-MM-DD HH:MM'; un fin a las 00:00 no cuenta ese día
+  const lastDay = (b) => (b.end_local.slice(11) === '00:00' ? addDays(b.end_local.slice(0, 10), -1) : b.end_local.slice(0, 10))
+  const blocksOn = (iso) => (data?.blocks || []).filter((b) => b.start_local.slice(0, 10) <= iso && lastDay(b) >= iso)
 
   const step = (n) => setCursor(view === 'month' ? addMonths(cursor, n) : addDays(cursor, view === 'week' ? 7 * n : n))
   const title = view === 'month' ? capitalize(formatMonth(cursor)) : view === 'week' ? `${formatDate(range[0], { day: 'numeric', month: 'short' })} – ${formatDate(range[1], { day: 'numeric', month: 'short', year: 'numeric' })}` : capitalize(formatDate(cursor, { weekday: 'long', day: 'numeric', month: 'long' }))
@@ -53,7 +55,7 @@ export default function Citas() {
   const open = (a) => setDrawer({ appointment: a })
 
   const BlockChip = ({ b }) => {
-    const s = isoToZoned(b.start_datetime, tz), e = isoToZoned(b.end_datetime, tz)
+    const s = { time: b.start_local.slice(11) }, e = { time: b.end_local.slice(11) }
     return <li className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-xs text-steel"><span className="flex items-center gap-2"><Ban size={13} /> Bloqueado {s.time === '00:00' && e.time === '00:00' ? 'todo el día' : `${s.time}–${e.time}`}{b.reason ? ` · ${b.reason}` : ''}</span><button onClick={() => setDelBlock(b)} className="font-semibold text-champagne">Quitar</button></li>
   }
 

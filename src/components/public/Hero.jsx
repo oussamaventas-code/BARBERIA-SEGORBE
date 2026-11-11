@@ -39,7 +39,7 @@ export default function Hero() {
   }, [])
 
   return (
-    <section ref={root} className="relative flex min-h-[100svh] flex-col overflow-hidden bg-obsidian pt-24 sm:pt-28">
+    <section ref={root} className="relative flex min-h-[100svh] flex-col overflow-hidden bg-obsidian pt-24 sm:pt-24">
       <div className="mx-auto grid w-full max-w-7xl flex-1 items-center gap-10 px-4 pb-8 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:gap-10 lg:px-10">
         <div className="flex flex-col justify-center">
           <p data-hero-item className="label-mono mb-5 flex items-center gap-3"><span className="h-px w-8 bg-champagne" /> Barbería · Murcia</p>
@@ -48,15 +48,15 @@ export default function Hero() {
             <br />
             Nuestra <span className="editorial inline-block pr-2 text-[1.12em] font-normal leading-none tracking-normal text-champagne">firma.</span>
           </h1>
-          <p data-hero-item className="mt-6 max-w-lg text-base leading-relaxed text-white/70 sm:text-lg">
+          <p data-hero-item className="mt-5 max-w-lg text-base leading-relaxed text-white/70 sm:text-lg">
             Un buen corte no es solamente cuestión de imagen. Es cuestión de confianza, detalle y personalidad. Encuentra tu estilo en Barbería Segorbe.
           </p>
-          <div data-hero-item className="mt-8 flex flex-col gap-3 xs:flex-row xs:flex-wrap">
+          <div data-hero-item className="mt-6 flex flex-col gap-3 xs:flex-row xs:flex-wrap">
             <Magnetic><Link to="/reservar" className="btn btn-gold w-full xs:w-auto">{firstName ? `Reservar, ${firstName}` : 'Reservar mi cita'} <ArrowRight size={16} /></Link></Magnetic>
             <Link to="/servicios" className="btn btn-ghost w-full xs:w-auto">Descubrir servicios</Link>
           </div>
           {firstName && <p data-hero-item className="mt-4 text-sm text-white/55">{isRegular ? `Qué bueno verte otra vez, ${firstName}.` : `Te reconocemos en este dispositivo, ${firstName}.`} <Link to="/mis-citas" className="text-champagne underline underline-offset-4">Ver mis citas</Link></p>}
-          {rating && settings.review_count ? <p data-hero-item className="mt-8 font-mono text-xs text-white/60 sm:text-[13px]">{rating} ★ · {settings.review_count} reseñas en Google</p> : null}
+          {rating && settings.review_count ? <p data-hero-item className="mt-6 font-mono text-xs text-white/60 sm:text-[13px]">{rating} ★ · {settings.review_count} reseñas en Google</p> : null}
         </div>
 
         <div className="relative mx-auto hidden w-full max-w-md sm:block lg:max-w-none">

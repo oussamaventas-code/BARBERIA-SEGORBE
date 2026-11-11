@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
-import { supabase, isSupabaseConfigured } from '../lib/supabase'
+import { http } from '../lib/http'
 import { useAuth } from './AuthContext'
 import { addTokens, clearIdentity, getProfile, getTokens, setProfile } from '../lib/identity'
 
@@ -18,9 +18,8 @@ export function IdentityProvider({ children }) {
 
   const refresh = useCallback(async () => {
     const tokens = getTokens()
-    if (!isSupabaseConfigured || (!tokens.length && !session)) return apply(null)
-    const { data } = await supabase.rpc('my_bookings', { p_tokens: tokens })
-    apply(data)
+    if (!tokens.length && !session) return apply(null)
+    try { apply(await http.post('/my/bookings', { tokens })) } catch { apply(null) }
   }, [session, apply])
 
   useEffect(() => { if (!authLoading) refresh() }, [authLoading, refresh])

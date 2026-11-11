@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Loader2 } from 'lucide-react'
-import { supabase } from '../../lib/supabase'
+import { http } from '../../lib/http'
 import { friendlyError } from '../../lib/errors'
 import { getTokens } from '../../lib/identity'
 import { capitalize, formatDate, STATUS } from '../../lib/format'
@@ -20,14 +20,11 @@ export default function MyBookings() {
   const [error, setError] = useState('')
   const [changing, setChanging] = useState(null)
 
-  const run = async (fn, args) => {
+  const run = async (path, args) => {
     setBusy(true); setError('')
-    const { data, error: e } = await supabase.rpc(fn, { ...args, p_tokens: getTokens() })
-    setBusy(false)
-    if (e) { setError(friendlyError(e)); return false }
-    apply(data); return true
+    try { apply(await http.post(path, { ...args, tokens: getTokens() })); return true } catch (e) { setError(friendlyError(e)); return false } finally { setBusy(false) }
   }
-  const cancel = (id) => window.confirm('¿Seguro que quieres cancelar esta cita?') && run('cancel_booking', { p_appointment_id: id })
+  const cancel = (id) => window.confirm('¿Seguro que quieres cancelar esta cita?') && run('/my/cancel', { appointment_id: id })
   const upcoming = bookings.filter((b) => b.status === 'pending' || b.status === 'confirmed')
   const past = bookings.filter((b) => !(b.status === 'pending' || b.status === 'confirmed'))
   const first = customer?.name?.split(' ')[0]
@@ -48,7 +45,7 @@ export default function MyBookings() {
       {changing === b.id && b.service_id && (
         <div className="mt-5 border-t border-white/10 pt-5">
           <p className="mb-4 text-sm text-white/65">Elige el nuevo hueco. La barbería tendrá que volver a confirmarla.</p>
-          {busy ? <Loader2 className="animate-spin text-champagne" /> : <SlotPicker serviceId={b.service_id} excludeId={b.id} onPick={async (date, time) => { if (await run('reschedule_booking', { p_appointment_id: b.id, p_date: date, p_start_time: time })) setChanging(null) }} />}
+          {busy ? <Loader2 className="animate-spin text-champagne" /> : <SlotPicker serviceId={b.service_id} excludeId={b.id} onPick={async (date, time) => { if (await run('/my/reschedule', { appointment_id: b.id, date, start_time: time })) setChanging(null) }} />}
         </div>
       )}
     </li>
