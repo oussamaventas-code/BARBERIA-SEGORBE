@@ -12,7 +12,7 @@ export default function ContactPage() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-10">
         <p className="label-mono mb-5">Contacto</p>
         <h1 className="max-w-3xl text-[clamp(2.4rem,6vw,4.5rem)] font-semibold leading-[1] tracking-tightest text-white">
-          Ven a vernos, o <span className="editorial font-normal tracking-normal text-champagne">escríbenos.</span>
+          Pásate por la barbería o escríbenos.
         </h1>
 
         <div className="mt-14 grid gap-5 lg:grid-cols-2">

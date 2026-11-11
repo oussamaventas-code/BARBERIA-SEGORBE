@@ -95,7 +95,7 @@ export default function BookingPage() {
   const Header = (
     <>
       <p className="label-mono mb-5">Reservar</p>
-      <h1 className="mb-10 text-[clamp(2.2rem,6vw,4rem)] font-semibold leading-[1] tracking-tightest text-white">Tu cita, <span className="editorial font-normal tracking-normal text-champagne">en un minuto.</span></h1>
+      <h1 className="mb-10 text-[clamp(2.2rem,6vw,4rem)] font-semibold leading-[1] tracking-tightest text-white">Reserva tu cita.</h1>
     </>
   )
 

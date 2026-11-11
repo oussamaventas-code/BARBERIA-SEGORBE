@@ -16,10 +16,9 @@ export default function FinalCTA() {
   }, [])
   return (
     <section ref={root} className="relative overflow-hidden bg-obsidian py-28 text-center sm:py-40">
-      <div aria-hidden className="pointer-events-none absolute left-1/2 top-1/2 h-[480px] w-[480px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-champagne/[0.08] blur-[110px]" />
       <div className="relative mx-auto max-w-4xl px-4">
         <h2 data-cta className="text-[clamp(2.6rem,8vw,6rem)] font-semibold leading-[0.98] tracking-tightest text-white">
-          Tu próximo corte <span className="editorial font-normal tracking-normal text-champagne">empieza aquí.</span>
+          Tu próximo corte empieza <span className="editorial font-normal tracking-normal text-champagne">aquí.</span>
         </h2>
         <p data-cta className="mx-auto mt-6 max-w-md text-lg text-white/60">Encuentra tu momento. Nosotros nos ocupamos del resto.</p>
         <div data-cta className="mt-10">

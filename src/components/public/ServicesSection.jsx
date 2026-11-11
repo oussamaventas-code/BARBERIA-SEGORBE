@@ -35,9 +35,9 @@ export default function ServicesSection({ limit, showHeader = true }) {
         {showHeader && (
           <div className="mb-14 grid gap-6 lg:mb-20 lg:grid-cols-[1fr_auto] lg:items-end">
             <div>
-              <p className="label-mono mb-5">Servicios</p>
+              <p className="mb-6 flex items-center gap-4 font-mono text-[11px] uppercase tracking-label text-steel"><span className="text-champagne">01</span><span className="h-px w-10 bg-white/20" />Servicios</p>
               <h2 className="max-w-3xl text-[clamp(2.4rem,6vw,4.5rem)] font-semibold leading-[0.98] tracking-tightest text-white">
-                El cuidado está en los <span className="editorial font-normal tracking-normal text-champagne">detalles.</span>
+                El cuidado está en los <span className="editorial font-normal tracking-normal">detalles.</span>
               </h2>
             </div>
             <p className="max-w-sm text-base text-white/60 lg:text-right">Cada servicio comienza escuchando lo que buscas.</p>

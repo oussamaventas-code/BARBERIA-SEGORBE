@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
-import { Star, ArrowRight } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import { gsap } from '../../lib/gsap'
 import { prefersReducedMotion } from '../../hooks/useReducedMotion'
 import { useBusiness } from '../../context/BusinessContext'
@@ -26,8 +26,6 @@ export default function Hero() {
 
   return (
     <section ref={root} className="relative overflow-hidden bg-obsidian pb-16 pt-28 sm:pt-32 lg:flex lg:min-h-[100svh] lg:items-center lg:pb-12">
-      {/* Luz lateral cálida */}
-      <div aria-hidden className="pointer-events-none absolute -left-40 top-1/4 h-[520px] w-[520px] rounded-full bg-champagne/[0.07] blur-[120px]" />
 
       <div className="relative mx-auto grid w-full max-w-7xl gap-12 px-4 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:gap-10 lg:px-10">
         <div className="flex flex-col justify-center">
@@ -58,10 +56,7 @@ export default function Hero() {
           </div>
 
           {rating && settings.review_count ? (
-            <p data-hero-item className="mt-9 flex items-center gap-3 font-mono text-xs text-white/60 sm:text-[13px]">
-              <span className="flex text-champagne" aria-hidden>
-                {Array.from({ length: 5 }).map((_, i) => <Star key={i} size={13} fill="currentColor" strokeWidth={0} />)}
-              </span>
+            <p data-hero-item className="mt-10 border-t border-white/10 pt-5 font-mono text-xs text-white/60 sm:text-[13px]">
               {rating} ★ · {settings.review_count} reseñas en Google
             </p>
           ) : null}
@@ -77,7 +72,7 @@ export default function Hero() {
               imgClassName="contrast-[1.08] saturate-[0.85]"
             />
             <div aria-hidden className="pointer-events-none absolute inset-0 rounded-[2.5rem] bg-gradient-to-t from-obsidian/70 via-transparent to-transparent sm:rounded-[3rem]" />
-            <div aria-hidden className="pointer-events-none absolute inset-0 rounded-[2.5rem] ring-1 ring-inset ring-white/10 sm:rounded-[3rem]" />
+            <p aria-hidden className="absolute -right-3 top-8 hidden origin-top-right rotate-90 font-mono text-[10px] uppercase tracking-[0.3em] text-white/35 xl:block">C. Jesús Esteban · 30009</p>
           </div>
 
           <div
